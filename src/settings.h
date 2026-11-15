@@ -10,6 +10,25 @@
 
 #include "dsp.h"
 
+// Config sections beyond look and analysis, grouped so they travel together.
+namespace config {
+
+struct Capture {
+    QString target;          // an app's name to show only its sound; empty = everything
+    double sleepAfter = 5.0; // seconds of silence before capture pauses; 0 = never
+    bool autoDelay = true;   // delay=auto: follow the output's reported latency
+};
+
+struct Wallpaper {
+    double height = 0.35;    // fraction of the screen the bars fill, from the bottom
+    double opacity = 0.8;
+    bool transparent = true; // show the desktop wallpaper behind the bars
+    QString layer = QStringLiteral("bottom"); // "bottom" (above the wallpaper) or "background"
+    QString monitor;         // output name like DP-1; empty = the compositor's choice
+};
+
+} // namespace config
+
 // The user's look and tuning, from ~/.config/spectra/spectra.conf (INI).
 // The file is written with defaults on first run so there is something to
 // edit, and watched so edits show up live without a restart.
@@ -23,6 +42,14 @@ class Settings : public QObject {
     Q_PROPERTY(QString colorMode READ colorMode WRITE setColorMode NOTIFY changed)
     Q_PROPERTY(bool showPeaks READ showPeaks WRITE setShowPeaks NOTIFY changed)
     Q_PROPERTY(bool glow READ glow WRITE setGlow NOTIFY changed)
+    // bars, mirrored, radial, stereo or waveform.
+    Q_PROPERTY(QString layout READ layout WRITE setLayout NOTIFY changed)
+    Q_PROPERTY(QString captureTarget READ captureTarget NOTIFY changed)
+    Q_PROPERTY(double sleepAfter READ sleepAfter NOTIFY changed)
+    Q_PROPERTY(bool autoDelay READ autoDelay NOTIFY changed)
+    Q_PROPERTY(double wallpaperHeight READ wallpaperHeight NOTIFY changed)
+    Q_PROPERTY(double wallpaperOpacity READ wallpaperOpacity NOTIFY changed)
+    Q_PROPERTY(bool wallpaperTransparent READ wallpaperTransparent NOTIFY changed)
     Q_PROPERTY(double barGap READ barGap NOTIFY changed) // fraction of bar width, 0..0.9
     Q_PROPERTY(QString error READ error NOTIFY changed)  // empty, or what's wrong with the file
 
@@ -39,6 +66,19 @@ public:
     void setShowPeaks(bool show);           // saved to the file
     bool glow() const;
     void setGlow(bool glow);                // saved to the file
+    QString layout() const;
+    void setLayout(const QString &layout);  // one of Layouts; saved to the file
+    static const QStringList Layouts;
+
+    config::Capture capture() const;
+    QString captureTarget() const { return capture().target; }
+    double sleepAfter() const { return capture().sleepAfter; }
+    bool autoDelay() const { return capture().autoDelay; }
+
+    config::Wallpaper wallpaper() const;
+    double wallpaperHeight() const { return wallpaper().height; }
+    double wallpaperOpacity() const { return wallpaper().opacity; }
+    bool wallpaperTransparent() const { return wallpaper().transparent; }
     double barGap() const;
     QString error() const;
     dsp::Tuning tuning() const;
@@ -63,6 +103,9 @@ private:
     QString m_mode;
     bool m_peaks = true;
     bool m_glow = false;
+    QString m_layout = QStringLiteral("bars");
+    config::Capture m_capture;
+    config::Wallpaper m_wallpaper;
     double m_gap = 0.25;
     dsp::Tuning m_tuning;
     QString m_error;

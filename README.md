@@ -23,7 +23,7 @@ Linux desktop with PipeWire and Qt 6 should do.
 | `P`   | Peak caps on or off                          |
 | `G`   | Glow on or off (or click the corner sparkle) |
 | `C`   | Switch color mode: spectrum or vertical      |
-| `Q`   | Quit                                         |
+| Ctrl+Q | Quit                                        |
 
 `P`, `G` and `C` save their choice to the config file, so it sticks.
 

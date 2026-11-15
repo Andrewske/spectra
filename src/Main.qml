@@ -3,55 +3,65 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Effects
 
-// The bars are the window: one dim icon in the corner, everything else on
-// the keyboard.
+// The visualizer is the window: one dim menu in the corner, everything else
+// on the keyboard. With --wallpaper the same scene sits on a layer under
+// every window, with no menu and no input.
 ApplicationWindow {
     id: window
     width: 960
     height: 400
-    visible: true
+    // wallpaper::attach shows the window once it's on its layer.
+    visible: !wallpaperMode
     title: "Spectra"
-    color: settings.background
+    color: wallpaperMode && settings.wallpaperTransparent ? "transparent" : settings.background
     Material.theme: Material.Dark
 
     property bool helpShown: false
     readonly property string problems: [capture.error, settings.error]
         .filter(text => text.length > 0).join("\n")
 
-    // Ticks once per rendered frame, so the bars move in step with vsync.
+    // Ticks once per rendered frame, so the visualizer moves in step with vsync.
     FrameAnimation {
         running: true
         onTriggered: spectrum.tick(frameTime)
     }
 
-    // Glow is a blurred copy of the bars drawn underneath the sharp ones, so
-    // each bar gets a soft halo in its own color. MultiEffect captures the
-    // bars itself; turning on the bars' own layer instead would squeeze them
-    // by the blur padding. Off, nothing is captured, so glow costs nothing.
-    MultiEffect {
-        anchors.fill: bars
-        source: bars
-        visible: settings.glow
-        opacity: 0.85
-        blurEnabled: true
-        blur: 1.0
-        blurMax: 48
-        blurMultiplier: 0.3
+    // As wallpaper the scene fills only the bottom of the screen and fades
+    // a little, so it reads as background.
+    Item {
+        id: scene
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: wallpaperMode ? parent.height * settings.wallpaperHeight : parent.height
+        opacity: wallpaperMode ? settings.wallpaperOpacity : 1
+
+        // Glow is a blurred copy of the visualizer drawn underneath the sharp
+        // one, so each mark gets a soft halo in its own color. MultiEffect
+        // captures the visualizer itself; turning on its own layer instead
+        // would squeeze it by the blur padding. Off, nothing is captured.
+        MultiEffect {
+            anchors.fill: visualizer
+            source: visualizer
+            visible: settings.glow
+            opacity: 0.85
+            blurEnabled: true
+            blur: 1.0
+            blurMax: 48
+            blurMultiplier: 0.3
+        }
+
+        Visualizer {
+            id: visualizer
+            anchors.fill: parent
+        }
     }
 
-    SpectrumBars {
-        id: bars
-        anchors.fill: parent
-    }
-
-    // Corner controls. Presets will join the glow button here.
-    Row {
+    CornerMenu {
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: 8
-        spacing: 4
-
-        GlowButton {}
+        visible: !wallpaperMode
     }
 
     // A dark plate keeps the message readable over bright bars.
@@ -77,7 +87,7 @@ ApplicationWindow {
 
     HelpOverlay {
         anchors.fill: parent
-        visible: window.helpShown
+        visible: window.helpShown && !wallpaperMode
         onDismissed: window.helpShown = false
     }
 
@@ -92,8 +102,9 @@ ApplicationWindow {
         enabled: window.helpShown
         onActivated: window.helpShown = false
     }
+    // Ctrl+Q, not Q: a stray key in a window that's always tiled shouldn't quit it.
     Shortcut {
-        sequence: "Q"
+        sequence: "Ctrl+Q"
         context: Qt.ApplicationShortcut
         onActivated: Qt.quit()
     }
@@ -122,5 +133,23 @@ ApplicationWindow {
         sequence: "C"
         context: Qt.ApplicationShortcut
         onActivated: settings.colorMode = settings.colorMode === "spectrum" ? "vertical" : "spectrum"
+    }
+    Shortcut {
+        sequence: "L"
+        context: Qt.ApplicationShortcut
+        onActivated: {
+            const layouts = ["bars", "mirrored", "radial", "stereo", "waveform"]
+            settings.layout = layouts[(layouts.indexOf(settings.layout) + 1) % layouts.length]
+        }
+    }
+    // 1 to 9 apply the presets in the order the menu lists them.
+    Instantiator {
+        model: 9
+        delegate: Shortcut {
+            required property int index
+            sequence: String(index + 1)
+            context: Qt.ApplicationShortcut
+            onActivated: presets.applyIndex(index)
+        }
     }
 }

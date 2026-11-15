@@ -1,8 +1,20 @@
 <RCC>
     <qresource prefix="/">
         <file alias="Main.qml">Main.qml</file>
-        <file alias="SpectrumBars.qml">SpectrumBars.qml</file>
         <file alias="HelpOverlay.qml">HelpOverlay.qml</file>
+        <file alias="Visualizer.qml">Visualizer.qml</file>
+    </qresource>
+    <!-- presets task: add new files to this block only. -->
+    <qresource prefix="/">
+        <file alias="CornerMenu.qml">CornerMenu.qml</file>
         <file alias="GlowButton.qml">GlowButton.qml</file>
+    </qresource>
+    <!-- visuals task: add new files to this block only. -->
+    <qresource prefix="/">
+        <file alias="SpectrumBars.qml">SpectrumBars.qml</file>
+        <file alias="MirroredLayout.qml">MirroredLayout.qml</file>
+        <file alias="RadialLayout.qml">RadialLayout.qml</file>
+        <file alias="StereoLayout.qml">StereoLayout.qml</file>
+        <file alias="WaveformLayout.qml">WaveformLayout.qml</file>
     </qresource>
 </RCC>

@@ -13,8 +13,10 @@ Rectangle {
         ["F", "Full screen"],
         ["P", "Peak caps on or off"],
         ["C", "Switch color mode (spectrum or vertical)"],
+        ["L", "Next layout (bars, mirrored, radial, stereo, waveform)"],
+        ["1-9", "Apply a preset"],
         ["G", "Glow on or off (or click the sparkle)"],
-        ["Q", "Quit"]
+        ["Ctrl+Q", "Quit"]
     ]
 
     MouseArea {
