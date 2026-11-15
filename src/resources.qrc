@@ -16,5 +16,7 @@
         <file alias="RadialLayout.qml">RadialLayout.qml</file>
         <file alias="StereoLayout.qml">StereoLayout.qml</file>
         <file alias="WaveformLayout.qml">WaveformLayout.qml</file>
+        <file alias="BarPalette.qml">BarPalette.qml</file>
+        <file alias="CenterBars.qml">CenterBars.qml</file>
     </qresource>
 </RCC>
