@@ -21,8 +21,10 @@ ApplicationWindow {
         .filter(text => text.length > 0).join("\n")
 
     // Ticks once per rendered frame, so the visualizer moves in step with vsync.
+    // While capture sleeps the bars have already fallen to zero, so there's
+    // nothing to animate and no reason to run an FFT on silence every frame.
     FrameAnimation {
-        running: true
+        running: !capture.sleeping
         onTriggered: spectrum.tick(frameTime)
     }
 
@@ -55,9 +57,16 @@ ApplicationWindow {
             id: visualizer
             anchors.fill: parent
         }
+
+        // Clicking the bars gives up on naming a preset, the way clicking
+        // outside a field does anywhere else.
+        TapHandler {
+            onTapped: cornerMenu.stopNaming()
+        }
     }
 
     CornerMenu {
+        id: cornerMenu
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: 8
