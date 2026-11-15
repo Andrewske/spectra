@@ -1,7 +1,7 @@
 pkgname=spectra
 pkgver=0.2.0
 pkgrel=1
-pkgdesc='Live audio spectrum of whatever is playing, in its own window'
+pkgdesc='Live audio spectrum of whatever is playing, in its own window or as a wallpaper'
 arch=('x86_64' 'aarch64')
 license=('MIT')
 depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'pipewire' 'fftw' 'layer-shell-qt')
@@ -20,4 +20,5 @@ package() {
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 "$startdir/spectra.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/spectra.svg"
   install -Dm644 "$startdir/spectra.desktop" "$pkgdir/usr/share/applications/spectra.desktop"
+  install -Dm644 "$startdir/spectra-wallpaper.desktop" "$pkgdir/usr/share/applications/spectra-wallpaper.desktop"
 }
