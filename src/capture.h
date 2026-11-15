@@ -4,6 +4,7 @@
 #include <QProcess>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QVector>
 
 // Records the default output's monitor (what you hear, after EasyEffects) by
@@ -47,5 +48,30 @@ signals:
     void statusChanged();
 
 private:
-    // TODO: owned by the capture task.
+    void launch();
+    void readOutput();
+    void consume(qint64 bytes);
+    void readErrors();
+    void handleProcessError(QProcess::ProcessError processError);
+    void handleFinished(int exitCode, QProcess::ExitStatus status);
+    void fail(const QString &message);
+    void setError(const QString &message);
+    void endProcess();
+
+    QString program_;
+    QStringList arguments_;
+    QProcess process_;
+    QTimer retryTimer_;
+    int retryDelayMs_ = 1000;
+    // True between start() and stop(); a recorder exit only triggers a retry
+    // while capture is wanted.
+    bool wanted_ = false;
+    QString error_;
+    QString lastErrorLine_;
+    QVector<float> ring_;
+    qint64 samplesWritten_ = 0;
+    // Reads land here; bytes after the last whole frame stay at the front
+    // until the next read completes the frame.
+    QByteArray readBuffer_;
+    int carryBytes_ = 0;
 };
