@@ -1,0 +1,43 @@
+# Maintainer: Kevin Andrews <41455434+Andrewske@users.noreply.github.com>
+
+# Builds a tagged release from GitHub, for the AUR. The PKGBUILD one level up
+# builds the working copy instead, for bin/install during development. Both
+# are named spectra-visualizer, because "spectra" on the AUR is an unrelated
+# C++ library.
+pkgname=spectra-visualizer
+_name=spectra
+pkgver=0.2.0
+pkgrel=1
+pkgdesc='Live audio spectrum of whatever is playing, in a window or as a Wayland wallpaper'
+arch=('x86_64' 'aarch64')
+url='https://github.com/Andrewske/spectra'
+license=('MIT')
+depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'layer-shell-qt' 'pipewire' 'libpulse' 'fftw'
+         'gcc-libs' 'glibc' 'hicolor-icon-theme')
+source=("$_name-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('f6eab7056335ce6b99f7568e66640aafaea7cb36606b27ecd0aaea649a986554')
+
+build() {
+  mkdir -p build
+  cd build
+  qmake6 "../$_name-$pkgver/spectra.pro"
+  make
+}
+
+check() {
+  mkdir -p tests
+  cd tests
+  qmake6 "../$_name-$pkgver/tests/spectra_tests.pro"
+  make
+  QT_QPA_PLATFORM=offscreen ./spectra_tests
+}
+
+package() {
+  install -Dm755 build/spectra "$pkgdir/usr/bin/spectra"
+  cd "$_name-$pkgver"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 pkgbuild/spectra.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/spectra.svg"
+  install -Dm644 pkgbuild/spectra.desktop "$pkgdir/usr/share/applications/spectra.desktop"
+  install -Dm644 pkgbuild/spectra-wallpaper.desktop "$pkgdir/usr/share/applications/spectra-wallpaper.desktop"
+}
