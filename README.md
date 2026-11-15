@@ -1,6 +1,6 @@
 # Spectra
 
-![Spectra: rainbow bars with glow on black](docs/screenshots/hero.png)
+![Spectra cycling through the bars, radial, mirrored and waveform layouts with glow](docs/screenshots/demo.webp)
 
 A live spectrum of whatever your computer is playing, in a window of its own
 or drawn on your desktop under every window. Black background, colored bars,
@@ -11,8 +11,16 @@ It listens to the default output's monitor through `pw-record`, so it shows
 what you actually hear, after EasyEffects or any other filter. Colors and
 tuning live in a plain config file that applies the moment you save it.
 
-Built for [Omarchy](https://omarchy.org) (Arch, Hyprland, PipeWire), but any
-Linux desktop with PipeWire and Qt 6 should do.
+Built and tested on [Omarchy](https://omarchy.org) (Arch, Hyprland,
+PipeWire), and made the way Omarchy's own apps are: one Qt Quick binary,
+installed as a package, opened from the launcher.
+
+- **The window** should work on most Linux desktops with PipeWire and Qt 6.
+- **Wallpaper mode** needs a Wayland compositor with layer-shell support:
+  Hyprland, Sway, KDE Plasma or river. It isn't available on GNOME or X11.
+
+Only Omarchy has actually been tested; reports from other setups are
+welcome.
 
 ## Shortcuts
 
@@ -85,15 +93,18 @@ name.
 spectrum on the desktop, under every window. Clicks go through to the
 desktop. Running it again turns it off. There's no menu, help or keyboard in
 this mode; change the look in the config, which applies live. `layer` and
-`monitor` are read at startup, so toggle it off and on to apply those.
+`monitor` are read at startup, so toggle it off and on to apply those. It
+needs a layer-shell compositor (see above).
 
-To start it with Hyprland, add this to `~/.config/hypr/autostart.lua`:
+To start it at login on **Omarchy**, add this to
+`~/.config/hypr/autostart.lua` (`o.exec_on_start` is Omarchy's helper):
 
 ```lua
 o.exec_on_start("spectra --wallpaper")
 ```
 
-(or `exec-once = spectra --wallpaper` in a `hyprland.conf` setup).
+On plain Hyprland, put `exec-once = spectra --wallpaper` in
+`hyprland.conf`; on Sway, `exec spectra --wallpaper` in its config.
 
 ## Config
 
@@ -199,6 +210,7 @@ You need `qt6-base`, `qt6-declarative`, `qt6-wayland`, `layer-shell-qt`,
 `base-devel`.
 
 ```sh
+git clone https://github.com/Andrewske/spectra.git && cd spectra
 bin/build      # builds build/spectra
 bin/test       # runs the tests offscreen
 bin/install    # makepkg -fsi: installs the binary, launcher entries and icon
