@@ -61,6 +61,7 @@ private slots:
     void duplicateKeySavesTheEffectiveCopy();
     void floorBelowDspSilenceRejected();
     void colorAtBlendsAlpha();
+    void glowReadAndSaved();
 };
 
 void SettingsTests::defaultsWrittenOnFirstRun() {
@@ -258,6 +259,19 @@ void SettingsTests::colorAtBlendsAlpha() {
     QCOMPARE(settings.colorAt(0).alpha(), 0);
     QCOMPARE(settings.colorAt(1).alpha(), 255);
     QVERIFY(std::abs(settings.colorAt(0.5).alphaF() - 0.5) < 0.01);
+}
+
+void SettingsTests::glowReadAndSaved() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, CustomConfig); // has no glow key, like configs from before glow
+    Settings settings(path);
+    QVERIFY(!settings.glow());
+    settings.setGlow(true);
+    QVERIFY(readFile(path).contains("glow=true"));
+    QVERIFY(readFile(path).contains("bands=64"));
+    Settings reread(path);
+    QVERIFY(reread.glow());
 }
 
 int runSettingsTests(int argc, char *argv[]) {

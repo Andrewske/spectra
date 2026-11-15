@@ -21,10 +21,11 @@ Linux desktop with PipeWire and Qt 6 should do.
 | Space | Freeze or unfreeze the bars                  |
 | `F`   | Full screen on or off                        |
 | `P`   | Peak caps on or off                          |
+| `G`   | Glow on or off (or click the corner sparkle) |
 | `C`   | Switch color mode: spectrum or vertical      |
 | `Q`   | Quit                                         |
 
-`P` and `C` save their choice to the config file, so it sticks.
+`P`, `G` and `C` save their choice to the config file, so it sticks.
 
 ## Config
 
@@ -39,6 +40,7 @@ background=#000000
 colors=#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff
 mode=spectrum
 peaks=true
+glow=false
 gap=0.25
 
 [analysis]
@@ -62,6 +64,7 @@ delay=0
 | `colors`     | comma-separated colors    | Gradient stops from low to high. One color gives solid bars. |
 | `mode`       | `spectrum` or `vertical`  | `spectrum` runs the gradient across the bands, bass to treble. `vertical` runs it up each bar, so color shows loudness. |
 | `peaks`      | `true` or `false`         | Thin caps that mark each bar's recent peak and drift down. |
+| `glow`       | `true` or `false`         | A soft halo around the bars, drawn on the GPU. |
 | `gap`        | 0 to 0.9                  | Space between bars, as a fraction of a bar's width. |
 
 Colors are anything Qt understands: `#rrggbb`, `#aarrggbb`, or names like

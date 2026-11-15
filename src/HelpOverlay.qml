@@ -13,6 +13,7 @@ Rectangle {
         ["F", "Full screen"],
         ["P", "Peak caps on or off"],
         ["C", "Switch color mode (spectrum or vertical)"],
+        ["G", "Glow on or off (or click the sparkle)"],
         ["Q", "Quit"]
     ]
 

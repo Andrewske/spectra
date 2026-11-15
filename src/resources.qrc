@@ -3,5 +3,6 @@
         <file alias="Main.qml">Main.qml</file>
         <file alias="SpectrumBars.qml">SpectrumBars.qml</file>
         <file alias="HelpOverlay.qml">HelpOverlay.qml</file>
+        <file alias="GlowButton.qml">GlowButton.qml</file>
     </qresource>
 </RCC>

@@ -22,6 +22,7 @@ class Settings : public QObject {
     Q_PROPERTY(QStringList colors READ colors NOTIFY changed)
     Q_PROPERTY(QString colorMode READ colorMode WRITE setColorMode NOTIFY changed)
     Q_PROPERTY(bool showPeaks READ showPeaks WRITE setShowPeaks NOTIFY changed)
+    Q_PROPERTY(bool glow READ glow WRITE setGlow NOTIFY changed)
     Q_PROPERTY(double barGap READ barGap NOTIFY changed) // fraction of bar width, 0..0.9
     Q_PROPERTY(QString error READ error NOTIFY changed)  // empty, or what's wrong with the file
 
@@ -36,6 +37,8 @@ public:
     void setColorMode(const QString &mode); // "spectrum" or "vertical"; saved to the file
     bool showPeaks() const;
     void setShowPeaks(bool show);           // saved to the file
+    bool glow() const;
+    void setGlow(bool glow);                // saved to the file
     double barGap() const;
     QString error() const;
     dsp::Tuning tuning() const;
@@ -59,6 +62,7 @@ private:
     QList<QColor> m_stops; // m_colors parsed once, so colorAt stays cheap
     QString m_mode;
     bool m_peaks = true;
+    bool m_glow = false;
     double m_gap = 0.25;
     dsp::Tuning m_tuning;
     QString m_error;

@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Effects
 
-// The bars are the window: no toolbar, no menus, everything on the keyboard.
+// The bars are the window: one dim icon in the corner, everything else on
+// the keyboard.
 ApplicationWindow {
     id: window
     width: 960
@@ -22,8 +24,34 @@ ApplicationWindow {
         onTriggered: spectrum.tick(frameTime)
     }
 
+    // Glow is a blurred copy of the bars drawn underneath the sharp ones, so
+    // each bar gets a soft halo in its own color. MultiEffect captures the
+    // bars itself; turning on the bars' own layer instead would squeeze them
+    // by the blur padding. Off, nothing is captured, so glow costs nothing.
+    MultiEffect {
+        anchors.fill: bars
+        source: bars
+        visible: settings.glow
+        opacity: 0.85
+        blurEnabled: true
+        blur: 1.0
+        blurMax: 48
+        blurMultiplier: 0.3
+    }
+
     SpectrumBars {
+        id: bars
         anchors.fill: parent
+    }
+
+    // Corner controls. Presets will join the glow button here.
+    Row {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 8
+        spacing: 4
+
+        GlowButton {}
     }
 
     // A dark plate keeps the message readable over bright bars.
@@ -84,6 +112,11 @@ ApplicationWindow {
         sequence: "P"
         context: Qt.ApplicationShortcut
         onActivated: settings.showPeaks = !settings.showPeaks
+    }
+    Shortcut {
+        sequence: "G"
+        context: Qt.ApplicationShortcut
+        onActivated: settings.glow = !settings.glow
     }
     Shortcut {
         sequence: "C"

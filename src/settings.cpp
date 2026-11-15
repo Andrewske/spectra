@@ -21,6 +21,7 @@ background=#000000
 colors=#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff
 mode=spectrum        ; spectrum = hue across bands, vertical = bottom to top
 peaks=true
+glow=false           ; soft light around the bars (G or the corner icon)
 gap=0.25             ; space between bars, as a fraction of a bar (0 to 0.9)
 
 [analysis]
@@ -49,6 +50,7 @@ struct Look {
     QStringList colors = DefaultColors;
     QString mode = QStringLiteral("spectrum");
     bool peaks = true;
+    bool glow = false;
     double gap = DefaultGap;
 };
 
@@ -264,6 +266,7 @@ Look readLook(const Ini &ini, QStringList &errors) {
     look.colors = readColors(ini, errors);
     look.mode = readMode(ini, errors);
     look.peaks = readBool(ini, QStringLiteral("look/peaks"), look.peaks, errors);
+    look.glow = readBool(ini, QStringLiteral("look/glow"), look.glow, errors);
     look.gap = readNumber(ini, QStringLiteral("look/gap"), look.gap, 0.0, 0.9, errors);
     return look;
 }
@@ -369,6 +372,7 @@ void Settings::apply(const QString &text) {
     m_stops = toStops(look.colors);
     m_mode = look.mode;
     m_peaks = look.peaks;
+    m_glow = look.glow;
     m_gap = look.gap;
     m_error = errors.join('\n');
 }
@@ -419,6 +423,16 @@ void Settings::setShowPeaks(bool show) {
         return;
     m_peaks = show;
     save(QStringLiteral("look"), QStringLiteral("peaks"), show ? QStringLiteral("true") : QStringLiteral("false"));
+    emit changed();
+}
+
+bool Settings::glow() const { return m_glow; }
+
+void Settings::setGlow(bool glow) {
+    if (glow == m_glow)
+        return;
+    m_glow = glow;
+    save(QStringLiteral("look"), QStringLiteral("glow"), glow ? QStringLiteral("true") : QStringLiteral("false"));
     emit changed();
 }
 
