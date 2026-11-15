@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spectra Wallpaper
+Comment=Show the live spectrum under every window; launch again to turn it off
+Exec=spectra --wallpaper
+Icon=spectra
+Terminal=false
+StartupNotify=false
+Categories=AudioVideo;Audio;
+Keywords=spectrum;visualizer;audio;wallpaper;background;
