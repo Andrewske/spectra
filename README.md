@@ -1,5 +1,7 @@
 # Spectra
 
+![Spectra showing a live spectrum in rainbow colors on black](docs/screenshot.png)
+
 A live spectrum of whatever your computer is playing, in a window of its own.
 Black background, colored bars, nothing else. Resize it, make it full screen,
 tile it next to your music player.
