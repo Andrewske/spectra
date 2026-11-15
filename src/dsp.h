@@ -39,10 +39,21 @@ QVector<float> stereoPower(const QVector<float> &interleaved, const QVector<floa
 // Exactly `count` log-spaced bands between minHz and maxHz. Bands are
 // ascending, never overlap, and each covers at least one bin; where the low
 // end has fewer bins than bands, those bands widen rather than share bins.
+// A band covers the bins whose centers fall in its log range. DC (bin 0) is
+// never used. Where bins are scarcer than bands, the low bands take one bin
+// each in order, which pushes the following bands upward until the log
+// spacing catches up; if it never does, the top bands run past maxHz, up to
+// the Nyquist bin. When minHz is so high that `count` bins don't fit above it,
+// the first band starts lower instead. Returns an empty vector when it can't
+// work at all: count < 1, count > fftSize / 2, or minHz >= maxHz.
 QVector<Band> logBands(int count, float minHz, float maxHz, int sampleRate, int fftSize);
 
-// Mean power per band in dB (10 * log10), normalized so a full-scale sine
-// reads about 0 dB, and clamped at -120 dB for silence.
+// Power per band in dB (10 * log10), normalized so a full-scale sine reads
+// about 0 dB, and clamped at -120 dB for silence. Assumes the power came from
+// a Hann window (dsp::hann). The band's bins are summed rather than averaged:
+// a sine then reads 0 dB whatever the band's width (as long as the band holds
+// its whole main lobe, about 3 bins), and broadband sound rises with band
+// width, which offsets music's roughly pink fall-off across log bands.
 QVector<float> bandDb(const QVector<float> &power, const QVector<Band> &bands, int fftSize);
 
 // dB to 0..1 between floorDb and ceilingDb, clamped.

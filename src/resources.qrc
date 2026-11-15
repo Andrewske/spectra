@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file alias="Main.qml">Main.qml</file>
+        <file alias="SpectrumBars.qml">SpectrumBars.qml</file>
+        <file alias="HelpOverlay.qml">HelpOverlay.qml</file>
     </qresource>
 </RCC>

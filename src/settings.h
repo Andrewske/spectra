@@ -1,9 +1,12 @@
 #pragma once
 
 #include <QColor>
+#include <QFileSystemWatcher>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 
 #include "dsp.h"
 
@@ -44,5 +47,20 @@ signals:
     void changed();
 
 private:
-    // TODO: owned by the ui task.
+    void ensureFile();
+    void reload();
+    void watch();
+    void save(const QString &section, const QString &key, const QString &value);
+
+    QString m_path;
+    QColor m_background;
+    QStringList m_colors;
+    QList<QColor> m_stops; // m_colors parsed once, so colorAt stays cheap
+    QString m_mode;
+    bool m_peaks = true;
+    double m_gap = 0.25;
+    dsp::Tuning m_tuning;
+    QString m_error;
+    QFileSystemWatcher m_watcher;
+    QTimer m_debounce;
 };

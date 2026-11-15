@@ -43,5 +43,18 @@ signals:
     void frozenChanged();
 
 private:
-    // TODO: owned by the dsp task.
+    // Rebuilds what depends on fftSize, band layout and sample rate.
+    void rebuildAnalysis();
+
+    Source m_source;
+    int m_sampleRate;
+    bool m_frozen = false;
+    dsp::Tuning m_tuning;
+    QVector<float> m_window;
+    QVector<dsp::Band> m_bands;
+    // Kept as floats for dsp, and as qreal lists so QML reads don't convert.
+    QVector<float> m_levels;
+    QVector<float> m_peaks;
+    QList<qreal> m_levelsOut;
+    QList<qreal> m_peaksOut;
 };
