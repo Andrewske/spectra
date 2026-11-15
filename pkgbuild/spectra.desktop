@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spectra
+Comment=Live audio spectrum of whatever is playing
+Exec=spectra
+Icon=spectra
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=spectrum;visualizer;audio;equalizer;
+StartupWMClass=spectra
