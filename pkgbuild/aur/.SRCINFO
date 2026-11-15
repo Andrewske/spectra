@@ -1,0 +1,22 @@
+pkgbase = spectra-visualizer
+	pkgdesc = Live audio spectrum of whatever is playing, in a window or as a Wayland wallpaper
+	pkgver = 0.2.0
+	pkgrel = 1
+	url = https://github.com/Andrewske/spectra
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = qt6-base
+	depends = qt6-declarative
+	depends = qt6-wayland
+	depends = layer-shell-qt
+	depends = pipewire
+	depends = libpulse
+	depends = fftw
+	depends = gcc-libs
+	depends = glibc
+	depends = hicolor-icon-theme
+	source = spectra-0.2.0.tar.gz::https://github.com/Andrewske/spectra/archive/refs/tags/v0.2.0.tar.gz
+	sha256sums = f6eab7056335ce6b99f7568e66640aafaea7cb36606b27ecd0aaea649a986554
+
+pkgname = spectra-visualizer

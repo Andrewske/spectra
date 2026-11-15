@@ -1,4 +1,7 @@
-pkgname=spectra
+# Builds the working copy for bin/install. pkgbuild/aur/PKGBUILD builds a
+# tagged release for the AUR; both use the same package name so one replaces
+# the other cleanly.
+pkgname=spectra-visualizer
 pkgver=0.2.0
 pkgrel=1
 pkgdesc='Live audio spectrum of whatever is playing, in its own window or as a wallpaper'
