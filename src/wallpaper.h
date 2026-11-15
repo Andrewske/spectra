@@ -38,11 +38,13 @@ QString lockPath(const QString &runtimeDir);
 enum class Claim {
     Owner,        // we hold the lock: run the wallpaper
     StoppedOther, // another wallpaper held it and was asked to stop: exit
-    Unguarded,    // the lock can't be used at all: run without the guard
+    Failed,       // the lock can't be taken or its owner can't be stopped: exit
 };
 
 // Takes the lock, or, if a live process holds it, calls stop(pid) on it.
-// The lock never goes stale by age, since a wallpaper runs for days.
+// The lock never goes stale by age, since a wallpaper runs for days. Only
+// Owner may run: carrying on without the lock would let a second wallpaper
+// start beside the first.
 Claim claimOrStop(QLockFile &lock, const std::function<bool(qint64)> &stop);
 
 // The index of the output called `wanted` (case-insensitive) in `names`,

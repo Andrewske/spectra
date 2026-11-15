@@ -217,6 +217,20 @@ QVariantMap toVariant(const Preset &preset) {
             {"builtIn", preset.builtIn}};
 }
 
+// The folder doesn't exist until the first preset is saved, so until then
+// the closest folder above it is watched for it to appear.
+QString nearestExisting(QString path) {
+    while (!QFileInfo(path).isDir() && path != QDir::rootPath())
+        path = QFileInfo(path).absolutePath();
+    return path;
+}
+
+bool samePresets(const QList<Preset> &a, const QList<Preset> &b) {
+    return std::equal(a.begin(), a.end(), b.begin(), b.end(), [](const Preset &x, const Preset &y) {
+        return x.name == y.name && x.values == y.values;
+    });
+}
+
 QString defaultDirectory() {
     return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
            QStringLiteral("/spectra/presets");
@@ -228,6 +242,7 @@ Presets::Presets(Settings *settings, const QString &directory, QObject *parent)
     : QObject(parent), m_settings(settings), m_directory(directory.isEmpty() ? defaultDirectory() : directory) {
     // Presets dropped into the folder by hand show up without a restart.
     connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &Presets::loadUserPresets);
+    connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, &Presets::loadUserPresets);
     loadUserPresets();
     followSettings();
 }
@@ -236,22 +251,39 @@ QList<Preset> Presets::all() const {
     return builtIns() + m_user;
 }
 
+// The watched parent also changes on every config save, so the list is only
+// re-announced when a preset actually changed.
 void Presets::loadUserPresets() {
-    watchDirectory();
-    m_user = readUserPresets(m_directory);
-    const QList<Preset> presets = all();
-    const bool currentGone = std::none_of(presets.begin(), presets.end(),
-                                          [&](const Preset &p) { return p.name == m_current; });
-    if (currentGone)
-        setCurrent({});
+    watchFolder();
+    const QList<Preset> user = readUserPresets(m_directory);
+    if (samePresets(user, m_user))
+        return;
+    m_user = user;
+    revalidateCurrent();
     emit listChanged();
 }
 
-// The folder only exists once a preset has been saved, so this is called
-// again after every save.
-void Presets::watchDirectory() {
-    if (QFileInfo(m_directory).isDir() && !m_watcher.directories().contains(m_directory))
-        m_watcher.addPath(m_directory);
+// Editors replace a preset file when they save it, which ends its watch, so
+// every watch is re-armed on each load: the folder (or the closest folder
+// above it while it doesn't exist) and each preset file in it.
+void Presets::watchFolder() {
+    const QStringList old = m_watcher.files() + m_watcher.directories();
+    if (!old.isEmpty())
+        m_watcher.removePaths(old);
+    m_watcher.addPath(nearestExisting(m_directory));
+    const QFileInfoList files = QDir(m_directory).entryInfoList({QStringLiteral("*.conf")}, QDir::Files);
+    for (const QFileInfo &file : files)
+        m_watcher.addPath(file.absoluteFilePath());
+}
+
+// The current preset stops being current when it's deleted, or when it or
+// the config change so that they no longer match.
+void Presets::revalidateCurrent() {
+    const QList<Preset> presets = all();
+    const auto it = std::find_if(presets.begin(), presets.end(),
+                                 [&](const Preset &p) { return p.name == m_current; });
+    if (it == presets.end() || !matches(*it, currentValues(*m_settings)))
+        setCurrent({});
 }
 
 // At startup the first preset the config already matches counts as current,
@@ -265,13 +297,7 @@ void Presets::followSettings() {
             break;
         }
     }
-    connect(m_settings, &Settings::changed, this, [this] {
-        const QList<Preset> presets = all();
-        const auto it = std::find_if(presets.begin(), presets.end(),
-                                     [&](const Preset &p) { return p.name == m_current; });
-        if (it != presets.end() && !matches(*it, currentValues(*m_settings)))
-            setCurrent({});
-    });
+    connect(m_settings, &Settings::changed, this, &Presets::revalidateCurrent);
 }
 
 void Presets::setCurrent(const QString &name) {

@@ -61,14 +61,20 @@ Item {
             old.destroy()
     }
 
-    Component.onCompleted: rebuildGradient()
-
     Connections {
         target: settings
         function onChanged() { wave.rebuildGradient() }
     }
 
+    // A layout loads after the frame that switched to it, and a frozen or
+    // sleeping spectrum sends no more frames, so take the current outputs now.
+    Component.onCompleted: {
+        rebuildGradient()
+        feed.onUpdated()
+    }
+
     Connections {
+        id: feed
         target: spectrum
         function onUpdated() { wave.samples = spectrum.waveform }
     }

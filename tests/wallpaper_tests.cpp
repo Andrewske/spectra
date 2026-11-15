@@ -11,8 +11,14 @@ namespace {
 struct FakeStop {
     QList<qint64> pids;
     bool result = true;
+    QLockFile *exitsFirst = nullptr; // the owner lets go just before the signal lands
     std::function<bool(qint64)> fn() {
-        return [this](qint64 pid) { pids << pid; return result; };
+        return [this](qint64 pid) {
+            pids << pid;
+            if (exitsFirst)
+                exitsFirst->unlock();
+            return result;
+        };
     }
 };
 
@@ -97,7 +103,7 @@ private slots:
         QVERIFY(stop.pids.isEmpty());
     }
 
-    void failedStopRunsUnguarded() {
+    void failedStopRefusesToRun() {
         QTemporaryDir dir;
         const QString path = wallpaper::lockPath(dir.path());
         QLockFile running(path);
@@ -105,13 +111,27 @@ private slots:
         QLockFile second(path);
         FakeStop stop;
         stop.result = false;
-        QCOMPARE(wallpaper::claimOrStop(second, stop.fn()), wallpaper::Claim::Unguarded);
+        QCOMPARE(wallpaper::claimOrStop(second, stop.fn()), wallpaper::Claim::Failed);
+        QVERIFY(!second.isLocked());
     }
 
-    void unusableLockRunsUnguarded() {
+    void ownerExitingBeforeTheSignalHandsOverTheLock() {
+        QTemporaryDir dir;
+        const QString path = wallpaper::lockPath(dir.path());
+        QLockFile running(path);
+        QVERIFY(running.tryLock(0));
+        QLockFile next(path);
+        FakeStop stop;
+        stop.result = false; // kill() found no such process
+        stop.exitsFirst = &running;
+        QCOMPARE(wallpaper::claimOrStop(next, stop.fn()), wallpaper::Claim::Owner);
+        QVERIFY(next.isLocked());
+    }
+
+    void unusableLockRefusesToRun() {
         QLockFile lock(QStringLiteral("/nonexistent-dir/spectra-wallpaper.lock"));
         FakeStop stop;
-        QCOMPARE(wallpaper::claimOrStop(lock, stop.fn()), wallpaper::Claim::Unguarded);
+        QCOMPARE(wallpaper::claimOrStop(lock, stop.fn()), wallpaper::Claim::Failed);
         QVERIFY(stop.pids.isEmpty());
     }
 
