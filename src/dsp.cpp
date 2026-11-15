@@ -40,15 +40,15 @@ const FftPlan &planFor(int size) {
     return it->second;
 }
 
-// Adds half of one channel's |X|^2 into `power`, so two calls average L and R.
+// Adds scale * |X|^2 of one channel into `power`; two calls at 0.5 average L and R.
 void addChannelPower(QVector<float> &power, const FftPlan &p, const QVector<float> &interleaved,
-                     const QVector<float> &window, int channel) {
+                     const QVector<float> &window, int channel, float scale) {
     const int size = window.size();
     for (int i = 0; i < size; ++i)
         p.in[i] = interleaved[2 * i + channel] * window[i];
     fftwf_execute(p.plan);
     for (int k = 0; k < power.size(); ++k)
-        power[k] += 0.5f * (p.out[k][0] * p.out[k][0] + p.out[k][1] * p.out[k][1]);
+        power[k] += scale * (p.out[k][0] * p.out[k][0] + p.out[k][1] * p.out[k][1]);
 }
 
 // Total one-sided power a full-scale sine puts into its main lobe with a
@@ -98,9 +98,27 @@ QVector<float> stereoPower(const QVector<float> &interleaved, const QVector<floa
     if (size < 2 || interleaved.size() != size * 2)
         return power;
     const FftPlan &p = planFor(size);
-    addChannelPower(power, p, interleaved, window, 0);
-    addChannelPower(power, p, interleaved, window, 1);
+    addChannelPower(power, p, interleaved, window, 0, 0.5f);
+    addChannelPower(power, p, interleaved, window, 1, 0.5f);
     return power;
+}
+
+QVector<float> channelPower(const QVector<float> &interleaved, const QVector<float> &window,
+                            int channel) {
+    const int size = window.size();
+    QVector<float> power(size / 2 + 1, 0.0f);
+    if (size < 2 || interleaved.size() != size * 2 || channel < 0 || channel > 1)
+        return power;
+    addChannelPower(power, planFor(size), interleaved, window, channel, 1.0f);
+    return power;
+}
+
+QVector<float> average(const QVector<float> &a, const QVector<float> &b) {
+    const int size = std::min(a.size(), b.size());
+    QVector<float> out(size);
+    for (int i = 0; i < size; ++i)
+        out[i] = 0.5f * (a[i] + b[i]);
+    return out;
 }
 
 QVector<Band> logBands(int count, float minHz, float maxHz, int sampleRate, int fftSize) {
@@ -167,6 +185,61 @@ QVector<float> peaks(const QVector<float> &previous, const QVector<float> &level
     QVector<float> out(levels.size());
     for (int i = 0; i < levels.size(); ++i)
         out[i] = std::max(levels[i], previous[i] - fallPerSecond * dt);
+    return out;
+}
+
+QVector<float> mono(const QVector<float> &interleaved) {
+    QVector<float> out(interleaved.size() / 2);
+    for (int i = 0; i < out.size(); ++i)
+        out[i] = 0.5f * (interleaved[2 * i] + interleaved[2 * i + 1]);
+    return out;
+}
+
+double risingZeroCrossing(const QVector<float> &samples, int earliest, int latest) {
+    // Searching from the newest end keeps the trace as close to now as it can be.
+    const int stop = std::max(1, earliest);
+    for (int i = std::min<int>(latest, samples.size() - 1); i >= stop; --i) {
+        const float before = samples[i - 1];
+        const float after = samples[i];
+        if (before < 0.0f && after >= 0.0f)
+            return (i - 1) + double(before) / (double(before) - after);
+    }
+    return -1.0;
+}
+
+QVector<float> resample(const QVector<float> &samples, double start, double span, int points) {
+    QVector<float> out(std::max(0, points), 0.0f);
+    const double step = points > 1 ? span / (points - 1) : 0.0;
+    const int last = samples.size() - 1;
+    for (int i = 0; i < out.size() && last > 0; ++i) {
+        const double position = start + i * step;
+        if (position < 0.0 || position > last)
+            continue;
+        // The final sample interpolates from its left neighbour with t = 1.
+        const int index = std::min(int(position), last - 1);
+        const float t = float(position - index);
+        out[i] = samples[index] + (samples[index + 1] - samples[index]) * t;
+    }
+    return out;
+}
+
+float followPeak(float envelope, float peak, float releaseSeconds, float dt) {
+    const float decayed = envelope * std::exp(-dt / std::max(1e-6f, releaseSeconds));
+    return std::max(peak, decayed);
+}
+
+float peakOf(const QVector<float> &values) {
+    float peak = 0.0f;
+    for (float v : values)
+        peak = std::max(peak, std::abs(v));
+    return peak;
+}
+
+QVector<float> scaleWave(const QVector<float> &wave, float envelope, float floor) {
+    const float gain = 1.0f / std::max({envelope, floor, 1e-6f});
+    QVector<float> out(wave.size());
+    for (int i = 0; i < wave.size(); ++i)
+        out[i] = std::clamp(wave[i] * gain, -1.0f, 1.0f);
     return out;
 }
 
