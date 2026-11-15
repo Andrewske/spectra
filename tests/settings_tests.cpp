@@ -74,8 +74,8 @@ void SettingsTests::defaultsWrittenOnFirstRun() {
     QVERIFY(settings.showPeaks());
     QCOMPARE(settings.barGap(), 0.25);
     QCOMPARE(settings.tuning().bands, 96);
-    QCOMPARE(settings.tuning().fftSize, 4096);
-    QCOMPARE(settings.tuning().ceilingDb, -10.0f);
+    QCOMPARE(settings.tuning().fftSize, dsp::Tuning{}.fftSize);
+    QCOMPARE(settings.tuning().ceilingDb, dsp::Tuning{}.ceilingDb);
 }
 
 void SettingsTests::valuesRead() {
@@ -132,7 +132,7 @@ void SettingsTests::badValueFallsBackWithError() {
     QCOMPARE(settings.colorMode(), QString("spectrum"));
     QVERIFY(settings.showPeaks());
     QCOMPARE(settings.tuning().bands, 96);
-    QCOMPARE(settings.tuning().fftSize, 4096);
+    QCOMPARE(settings.tuning().fftSize, dsp::Tuning{}.fftSize);
     QCOMPARE(settings.background(), QColor("#00ff00")); // good keys still read
     const QString error = settings.error();
     for (const char *key : {"gap", "colors", "mode", "peaks", "bands", "fft_size"})

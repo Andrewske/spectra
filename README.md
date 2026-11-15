@@ -41,11 +41,11 @@ gap=0.25
 
 [analysis]
 bands=96
-fft_size=4096
+fft_size=8192
 min_hz=30
 max_hz=16000
 floor_db=-70
-ceiling_db=-10
+ceiling_db=-3
 attack=0.02
 decay=0.25
 peak_fall=0.6

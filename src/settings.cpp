@@ -24,11 +24,11 @@ gap=0.25             ; space between bars, as a fraction of a bar (0 to 0.9)
 
 [analysis]
 bands=96             ; 8 to 256
-fft_size=4096        ; 512, 1024, 2048, 4096, 8192 or 16384
+fft_size=8192        ; 512, 1024, 2048, 4096, 8192 or 16384
 min_hz=30
 max_hz=16000
 floor_db=-70         ; this level and below is an empty bar
-ceiling_db=-10       ; this level and above is a full bar
+ceiling_db=-3        ; this level and above is a full bar
 attack=0.02          ; seconds for a bar to rise
 decay=0.25           ; seconds for a bar to fall
 peak_fall=0.6        ; peak caps fall this much of full height per second

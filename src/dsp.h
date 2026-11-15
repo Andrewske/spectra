@@ -10,11 +10,11 @@ namespace dsp {
 // config file; Spectrum applies it.
 struct Tuning {
     int bands = 96;
-    int fftSize = 4096;          // power of two
+    int fftSize = 8192;          // power of two
     float minHz = 30.0f;
     float maxHz = 16000.0f;
     float floorDb = -70.0f;      // maps to an empty bar
-    float ceilingDb = -10.0f;    // maps to a full bar
+    float ceilingDb = -3.0f;     // maps to a full bar
     float attackSeconds = 0.02f; // time constant while a bar rises
     float decaySeconds = 0.25f;  // time constant while a bar falls
     float peakFallPerSecond = 0.6f; // peak caps fall this much of full height per second

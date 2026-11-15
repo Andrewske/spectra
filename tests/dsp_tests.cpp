@@ -284,13 +284,13 @@ private slots:
         fake->silentFrames = Rate / 2; // the newest half second is silent
         Spectrum spectrum(sourceFor(fake), Rate);
         tickFor(spectrum, 0.3);
-        QCOMPARE(fake->lastRequest, 4096);
+        QCOMPARE(fake->lastRequest, dsp::Tuning{}.fftSize);
         QCOMPARE(maxOf(spectrum.levels()), 0.0);
         dsp::Tuning tuning = spectrum.tuning();
         tuning.delaySeconds = 0.5f;
         spectrum.setTuning(tuning);
         tickFor(spectrum, 0.3);
-        QCOMPARE(fake->lastRequest, 4096 + Rate / 2);
+        QCOMPARE(fake->lastRequest, dsp::Tuning{}.fftSize + Rate / 2);
         QVERIFY(maxOf(spectrum.levels()) > 0.99);
     }
 
