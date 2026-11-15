@@ -8,6 +8,8 @@
     <qresource prefix="/">
         <file alias="CornerMenu.qml">CornerMenu.qml</file>
         <file alias="GlowButton.qml">GlowButton.qml</file>
+        <file alias="MenuChip.qml">MenuChip.qml</file>
+        <file alias="PresetSwatch.qml">PresetSwatch.qml</file>
     </qresource>
     <!-- visuals task: add new files to this block only. -->
     <qresource prefix="/">

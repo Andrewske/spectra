@@ -2,7 +2,9 @@
 
 #include <QColor>
 #include <QFileSystemWatcher>
+#include <QHash>
 #include <QList>
+#include <QMap>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -26,6 +28,10 @@ struct Wallpaper {
     QString layer = QStringLiteral("bottom"); // "bottom" (above the wallpaper) or "background"
     QString monitor;         // output name like DP-1; empty = the compositor's choice
 };
+
+// "section/key" to its raw value, with comments stripped: the file the way
+// Settings reads it. When a key appears twice the last one wins.
+QHash<QString, QString> parseIni(const QString &text);
 
 } // namespace config
 
@@ -85,6 +91,11 @@ public:
 
     // The gradient color at t in 0..1, interpolated between `colors`.
     Q_INVOKABLE QColor colorAt(double t) const;
+
+    // Sets several "section/key" values in one atomic write, keeping every
+    // other line and comment, then reads the result back and emits changed.
+    // False, with the reason in error, when the file can't be read or saved.
+    bool setValues(const QMap<QString, QString> &values);
 
 signals:
     void changed();
