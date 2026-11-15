@@ -218,3 +218,9 @@ void Capture::endProcess() {
         process_.waitForFinished(StopWaitMs);
     }
 }
+
+// TODO: stubs from the phase 2 scaffold; owned by the capture task.
+void Capture::setTarget(const QString &) {}
+void Capture::setSleepAfter(double) {}
+bool Capture::sleeping() const { return false; }
+double Capture::outputLatency() const { return 0.0; }

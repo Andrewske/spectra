@@ -22,6 +22,7 @@ colors=#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff
 mode=spectrum        ; spectrum = hue across bands, vertical = bottom to top
 peaks=true
 glow=false           ; soft light around the bars (G or the corner icon)
+layout=bars          ; bars, mirrored, radial, stereo or waveform (L cycles)
 gap=0.25             ; space between bars, as a fraction of a bar (0 to 0.9)
 
 [analysis]
@@ -34,7 +35,18 @@ ceiling_db=-3        ; this level and above is a full bar
 attack=0.02          ; seconds for a bar to rise
 decay=0.25           ; seconds for a bar to fall
 peak_fall=0.6        ; peak caps fall this much of full height per second
-delay=0              ; seconds to hold the picture back, for Bluetooth latency
+delay=auto           ; seconds to hold the picture back; auto follows the output's latency
+
+[capture]
+target=              ; an app's name (like spotify) to show only its sound; empty = everything
+sleep_after=5        ; seconds of silence before capture pauses so the device can sleep; 0 = never
+
+[wallpaper]          ; used by spectra --wallpaper
+height=0.35          ; fraction of the screen the bars fill, from the bottom
+opacity=0.8
+transparent=true     ; show the desktop wallpaper behind the bars
+layer=bottom         ; bottom = just above the wallpaper, background = replaces it
+monitor=             ; output name like DP-1; empty = the compositor's choice
 )";
 
 const QStringList DefaultColors = {"#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"};
@@ -249,15 +261,35 @@ QStringList readColors(const Ini &ini, QStringList &errors) {
     return DefaultColors;
 }
 
+// One of a fixed set of words, case-insensitive.
+QString readChoice(const Ini &ini, const QString &key, const QStringList &choices, QStringList &errors) {
+    const QString value = ini.value(key).trimmed().toLower();
+    if (!ini.contains(key) || choices.contains(value))
+        return ini.contains(key) ? value : choices.first();
+    errors << QStringLiteral("%1 should be %2").arg(where(key), choices.join(QStringLiteral(", ")));
+    return choices.first();
+}
+
 QString readMode(const Ini &ini, QStringList &errors) {
-    const QString key = QStringLiteral("look/mode");
-    const QString value = ini.value(key).toLower();
-    if (!ini.contains(key))
-        return QStringLiteral("spectrum");
-    if (value == "spectrum" || value == "vertical")
-        return value;
-    errors << QStringLiteral("%1 should be spectrum or vertical").arg(where(key));
-    return QStringLiteral("spectrum");
+    return readChoice(ini, QStringLiteral("look/mode"), {"spectrum", "vertical"}, errors);
+}
+
+config::Capture readCapture(const Ini &ini, QStringList &errors) {
+    config::Capture c;
+    c.target = ini.value(QStringLiteral("capture/target")).trimmed();
+    c.sleepAfter = readNumber(ini, QStringLiteral("capture/sleep_after"), c.sleepAfter, 0.0, 3600.0, errors);
+    c.autoDelay = ini.value(QStringLiteral("analysis/delay"), QStringLiteral("auto")).trimmed().toLower() == "auto";
+    return c;
+}
+
+config::Wallpaper readWallpaper(const Ini &ini, QStringList &errors) {
+    config::Wallpaper w;
+    w.height = readNumber(ini, QStringLiteral("wallpaper/height"), w.height, 0.05, 1.0, errors);
+    w.opacity = readNumber(ini, QStringLiteral("wallpaper/opacity"), w.opacity, 0.0, 1.0, errors);
+    w.transparent = readBool(ini, QStringLiteral("wallpaper/transparent"), w.transparent, errors);
+    w.layer = readChoice(ini, QStringLiteral("wallpaper/layer"), {"bottom", "background"}, errors);
+    w.monitor = ini.value(QStringLiteral("wallpaper/monitor")).trimmed();
+    return w;
 }
 
 Look readLook(const Ini &ini, QStringList &errors) {
@@ -304,7 +336,9 @@ dsp::Tuning readTuning(const Ini &ini, QStringList &errors) {
     t.attackSeconds = number("attack", t.attackSeconds, 0.001, 10.0);
     t.decaySeconds = number("decay", t.decaySeconds, 0.001, 10.0);
     t.peakFallPerSecond = number("peak_fall", t.peakFallPerSecond, 0.01, 100.0);
-    t.delaySeconds = number("delay", t.delaySeconds, 0.0, 2.0);
+    // "auto" leaves the delay at 0 here; main.cpp adds the measured latency.
+    if (ini.value(QStringLiteral("analysis/delay")).trimmed().toLower() != "auto")
+        t.delaySeconds = number("delay", t.delaySeconds, 0.0, 2.0);
     return checkRanges(t, errors);
 }
 
@@ -373,6 +407,9 @@ void Settings::apply(const QString &text) {
     m_mode = look.mode;
     m_peaks = look.peaks;
     m_glow = look.glow;
+    m_layout = readChoice(ini, QStringLiteral("look/layout"), Layouts, errors);
+    m_capture = readCapture(ini, errors);
+    m_wallpaper = readWallpaper(ini, errors);
     m_gap = look.gap;
     m_error = errors.join('\n');
 }
@@ -435,6 +472,22 @@ void Settings::setGlow(bool glow) {
     save(QStringLiteral("look"), QStringLiteral("glow"), glow ? QStringLiteral("true") : QStringLiteral("false"));
     emit changed();
 }
+
+const QStringList Settings::Layouts = {"bars", "mirrored", "radial", "stereo", "waveform"};
+
+QString Settings::layout() const { return m_layout; }
+
+void Settings::setLayout(const QString &layout) {
+    const QString value = layout.trimmed().toLower();
+    if (!Layouts.contains(value) || value == m_layout)
+        return;
+    m_layout = value;
+    save(QStringLiteral("look"), QStringLiteral("layout"), value);
+    emit changed();
+}
+
+config::Capture Settings::capture() const { return m_capture; }
+config::Wallpaper Settings::wallpaper() const { return m_wallpaper; }
 
 double Settings::barGap() const { return m_gap; }
 QString Settings::error() const { return m_error; }

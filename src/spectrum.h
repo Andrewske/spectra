@@ -14,6 +14,11 @@ class Spectrum : public QObject {
     Q_OBJECT
     Q_PROPERTY(QList<qreal> levels READ levels NOTIFY updated)
     Q_PROPERTY(QList<qreal> peaks READ peaks NOTIFY updated)
+    // Per-channel levels for the stereo layout, same bands and range as levels.
+    Q_PROPERTY(QList<qreal> levelsLeft READ levelsLeft NOTIFY updated)
+    Q_PROPERTY(QList<qreal> levelsRight READ levelsRight NOTIFY updated)
+    // The latest audio as -1..1 points, oldest first, for the waveform layout.
+    Q_PROPERTY(QList<qreal> waveform READ waveform NOTIFY updated)
     Q_PROPERTY(int bandCount READ bandCount NOTIFY tuningChanged)
     Q_PROPERTY(bool frozen READ frozen WRITE setFrozen NOTIFY frozenChanged)
 
@@ -26,6 +31,13 @@ public:
 
     QList<qreal> levels() const;
     QList<qreal> peaks() const;
+    QList<qreal> levelsLeft() const;
+    QList<qreal> levelsRight() const;
+    QList<qreal> waveform() const;
+
+    // The layout being drawn (Settings::Layouts), so tick only computes what
+    // that layout reads.
+    void setLayout(const QString &layout);
     int bandCount() const;
     bool frozen() const;
     void setFrozen(bool frozen);

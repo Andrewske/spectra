@@ -62,6 +62,10 @@ private slots:
     void floorBelowDspSilenceRejected();
     void colorAtBlendsAlpha();
     void glowReadAndSaved();
+    void phaseTwoDefaults();
+    void phaseTwoValuesRead();
+    void badLayoutFallsBackWithError();
+    void layoutSaved();
 };
 
 void SettingsTests::defaultsWrittenOnFirstRun() {
@@ -272,6 +276,69 @@ void SettingsTests::glowReadAndSaved() {
     QVERIFY(readFile(path).contains("bands=64"));
     Settings reread(path);
     QVERIFY(reread.glow());
+}
+
+void SettingsTests::phaseTwoDefaults() {
+    QTemporaryDir dir;
+    Settings settings(dir.filePath("spectra.conf"));
+    QCOMPARE(settings.layout(), QString("bars"));
+    QVERIFY(settings.autoDelay());
+    QCOMPARE(settings.tuning().delaySeconds, 0.0f);
+    QCOMPARE(settings.captureTarget(), QString());
+    QCOMPARE(settings.sleepAfter(), 5.0);
+    const config::Wallpaper w = settings.wallpaper();
+    QCOMPARE(w.height, 0.35);
+    QCOMPARE(w.opacity, 0.8);
+    QVERIFY(w.transparent);
+    QCOMPARE(w.layer, QString("bottom"));
+    QCOMPARE(w.monitor, QString());
+    QVERIFY2(settings.error().isEmpty(), qPrintable(settings.error()));
+}
+
+void SettingsTests::phaseTwoValuesRead() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, "[look]\nlayout=Radial\n[analysis]\ndelay=0.2\n"
+                    "[capture]\ntarget=Spotify\nsleep_after=0\n"
+                    "[wallpaper]\nheight=0.5\nopacity=1\ntransparent=false\nlayer=background\nmonitor=DP-1\n");
+    Settings settings(path);
+    QCOMPARE(settings.layout(), QString("radial"));
+    QVERIFY(!settings.autoDelay());
+    QCOMPARE(settings.tuning().delaySeconds, 0.2f);
+    QCOMPARE(settings.captureTarget(), QString("Spotify"));
+    QCOMPARE(settings.sleepAfter(), 0.0);
+    const config::Wallpaper w = settings.wallpaper();
+    QCOMPARE(w.height, 0.5);
+    QCOMPARE(w.opacity, 1.0);
+    QVERIFY(!w.transparent);
+    QCOMPARE(w.layer, QString("background"));
+    QCOMPARE(w.monitor, QString("DP-1"));
+    QVERIFY2(settings.error().isEmpty(), qPrintable(settings.error()));
+}
+
+void SettingsTests::badLayoutFallsBackWithError() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, "[look]\nlayout=spiral\n[wallpaper]\nlayer=top\nheight=3\n");
+    Settings settings(path);
+    QCOMPARE(settings.layout(), QString("bars"));
+    QCOMPARE(settings.wallpaper().layer, QString("bottom"));
+    QCOMPARE(settings.wallpaper().height, 0.35);
+    for (const char *key : {"layout", "layer", "height"})
+        QVERIFY2(settings.error().contains(key), qPrintable(settings.error()));
+}
+
+void SettingsTests::layoutSaved() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, CustomConfig); // no layout key, like configs from before layouts
+    Settings settings(path);
+    settings.setLayout("waveform");
+    settings.setLayout("nonsense");
+    QCOMPARE(settings.layout(), QString("waveform"));
+    QVERIFY(readFile(path).contains("layout=waveform"));
+    QVERIFY(readFile(path).contains("bands=64"));
+    QCOMPARE(Settings(path).layout(), QString("waveform"));
 }
 
 int runSettingsTests(int argc, char *argv[]) {

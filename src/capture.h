@@ -14,6 +14,11 @@ class Capture : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool running READ running NOTIFY statusChanged)
     Q_PROPERTY(QString error READ error NOTIFY statusChanged)
+    // True while capture is paused after sleepAfter seconds of silence, so
+    // the audio device can suspend.
+    Q_PROPERTY(bool sleeping READ sleeping NOTIFY statusChanged)
+    // Seconds of latency the default output adds (Bluetooth is ~0.15-0.25).
+    Q_PROPERTY(double outputLatency READ outputLatency NOTIFY outputLatencyChanged)
 
 public:
     static constexpr int SampleRate = 48000;
@@ -44,8 +49,20 @@ public:
     // Frames received since start(), so a consumer can tell new audio came in.
     qint64 framesReceived() const;
 
+    // An app's name (matched against its PipeWire application name or
+    // binary, case-insensitively) to capture only that app; empty captures
+    // the default output's monitor. Called on every settings change, so an
+    // unchanged value must do nothing.
+    void setTarget(const QString &app);
+    // Seconds of silence before capture pauses; 0 never pauses. Same rule:
+    // an unchanged value does nothing.
+    void setSleepAfter(double seconds);
+    bool sleeping() const;
+    double outputLatency() const;
+
 signals:
     void statusChanged();
+    void outputLatencyChanged();
 
 private:
     void launch();

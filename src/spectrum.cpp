@@ -120,3 +120,9 @@ void Spectrum::tick(double dtSeconds) {
     m_peaksOut = toQrealList(m_peaks);
     emit updated();
 }
+
+// TODO: stubs from the phase 2 scaffold; owned by the visuals task.
+QList<qreal> Spectrum::levelsLeft() const { return {}; }
+QList<qreal> Spectrum::levelsRight() const { return {}; }
+QList<qreal> Spectrum::waveform() const { return {}; }
+void Spectrum::setLayout(const QString &) {}
