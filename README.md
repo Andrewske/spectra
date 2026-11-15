@@ -203,7 +203,28 @@ Used by `spectra --wallpaper`.
 Lines starting with `;` or `#` are comments, and so is anything after a `;`
 that follows a space.
 
-## Build and install
+## Install
+
+On Arch or Omarchy, install the latest release from its PKGBUILD. It
+downloads the tagged source from GitHub, checks it against a pinned
+checksum, builds it, runs the tests and installs it with pacman:
+
+```sh
+cd "$(mktemp -d)"
+curl -LO https://raw.githubusercontent.com/Andrewske/spectra/main/pkgbuild/aur/PKGBUILD
+makepkg -si
+```
+
+`-s` pulls in any missing dependencies. It takes a minute or two, then asks
+for your sudo password. Building in a fresh temp folder keeps makepkg's
+leftovers (`src/`, `pkg/`, the tarball) out of your home folder. The
+package is called `spectra-visualizer`; remove it with
+`sudo pacman -R spectra-visualizer`.
+
+Spectra and Spectra Wallpaper then show up in the app launcher
+(Super + Space).
+
+## Build from source
 
 You need `qt6-base`, `qt6-declarative`, `qt6-wayland`, `layer-shell-qt`,
 `pipewire` (for `pw-record`), `libpulse` (for `pactl`) and `fftw`, plus
@@ -216,8 +237,8 @@ bin/test       # runs the tests offscreen
 bin/install    # makepkg -fsi: installs the binary, launcher entries and icon
 ```
 
-After `bin/install`, Spectra and Spectra Wallpaper show up in the app
-launcher (Super + Space).
+`bin/install` builds your working copy into the same `spectra-visualizer`
+package, so it replaces a release install and the other way round.
 
 ## License
 
