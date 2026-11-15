@@ -1,16 +1,26 @@
 #pragma once
 
+#include <QFileSystemWatcher>
+#include <QList>
+#include <QMap>
 #include <QObject>
 #include <QString>
 #include <QVariantList>
 
 class Settings;
 
-// Named looks: colors, mode, layout, glow, peaks and tuning in one bundle.
-// Built-in presets are compiled in; the user's own live in
-// ~/.config/spectra/presets/<name>.conf as partial INI files. Applying one
-// writes its keys into spectra.conf, so the config always shows what's on
-// screen and edits to it still apply live.
+// One named look: the "section/key" values it writes into spectra.conf.
+struct Preset {
+    QString name;
+    bool builtIn = false;
+    QMap<QString, QString> values;
+};
+
+// Named looks: colors, mode, glow, peaks and, for the user's own, tuning.
+// Never the layout. Built-in presets are compiled in and set look keys only;
+// the user's own live in ~/.config/spectra/presets/<name>.conf as partial INI
+// files. Applying one writes its keys into spectra.conf, so the config always
+// shows what's on screen and edits to it still apply live.
 class Presets : public QObject {
     Q_OBJECT
     // [{name: string, colors: [string], builtIn: bool}], built-ins first.
@@ -37,5 +47,15 @@ signals:
     void currentChanged();
 
 private:
-    // TODO: owned by the presets task.
+    QList<Preset> all() const;
+    void loadUserPresets();
+    void watchDirectory();
+    void followSettings();
+    void setCurrent(const QString &name);
+
+    Settings *m_settings;
+    QString m_directory;
+    QList<Preset> m_user; // sorted by name, case-insensitively
+    QString m_current;
+    QFileSystemWatcher m_watcher;
 };

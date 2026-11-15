@@ -177,6 +177,27 @@ std::optional<QString> readText(const QString &path) {
     return QString::fromUtf8(file.readAll());
 }
 
+// The text to edit when saving: the file, or the defaults when it's missing
+// or blank, so a save never leaves a config with only one key in it.
+std::optional<QString> editableText(const QString &path) {
+    const std::optional<QString> text =
+        QFileInfo::exists(path) ? readText(path) : QString::fromUtf8(DefaultConfig);
+    if (text && text->trimmed().isEmpty())
+        return QString::fromUtf8(DefaultConfig);
+    return text;
+}
+
+// Keys look like "look/colors"; a key without a section is skipped rather
+// than written somewhere the reader would never look.
+QString setIniValues(QString text, const QMap<QString, QString> &values) {
+    for (auto it = values.cbegin(); it != values.cend(); ++it) {
+        const qsizetype slash = it.key().indexOf('/');
+        if (slash > 0)
+            text = setIniValue(text, it.key().left(slash), it.key().mid(slash + 1), it.value());
+    }
+    return text;
+}
+
 QString unreadable(const QString &path) {
     return QStringLiteral("Can't read %1; keeping the current settings").arg(path);
 }
@@ -363,6 +384,10 @@ QString defaultPath() {
 
 } // namespace
 
+QHash<QString, QString> config::parseIni(const QString &text) {
+    return ::parseIni(text);
+}
+
 Settings::Settings(const QString &path, QObject *parent)
     : QObject(parent), m_path(path.isEmpty() ? defaultPath() : path), m_background(Qt::black),
       m_colors(DefaultColors), m_stops(toStops(DefaultColors)), m_mode(QStringLiteral("spectrum")) {
@@ -427,16 +452,26 @@ void Settings::watch() {
 }
 
 void Settings::save(const QString &section, const QString &key, const QString &value) {
-    const bool exists = QFileInfo::exists(m_path);
-    const std::optional<QString> text = exists ? readText(m_path) : QString::fromUtf8(DefaultConfig);
-    if (!text) {
+    const std::optional<QString> base = editableText(m_path);
+    if (!base) {
         m_error = unreadable(m_path);
         return;
     }
-    const QString base = text->trimmed().isEmpty() ? QString::fromUtf8(DefaultConfig) : *text;
-    const QString error = writeAtomically(m_path, setIniValue(base, section, key, value));
+    const QString error = writeAtomically(m_path, setIniValue(*base, section, key, value));
     if (!error.isEmpty())
         m_error = error;
+}
+
+bool Settings::setValues(const QMap<QString, QString> &values) {
+    const std::optional<QString> base = editableText(m_path);
+    const QString text = base ? setIniValues(*base, values) : QString();
+    const QString error = base ? writeAtomically(m_path, text) : unreadable(m_path);
+    if (error.isEmpty())
+        apply(text);
+    else
+        m_error = error;
+    emit changed();
+    return error.isEmpty();
 }
 
 QString Settings::path() const { return m_path; }
