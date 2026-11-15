@@ -147,9 +147,16 @@ QVector<float> Spectrum::targetLevels(const QVector<float> &power) const {
 }
 
 void Spectrum::tick(double dtSeconds) {
-    if (m_frozen)
-        return;
-    const float dt = float(std::clamp(dtSeconds, 0.0, MaxFrameSeconds));
+    if (!m_frozen)
+        analyze(float(std::clamp(dtSeconds, 0.0, MaxFrameSeconds)));
+}
+
+void Spectrum::clear() {
+    resetOutputs();
+    emit updated();
+}
+
+void Spectrum::analyze(float dt) {
     const int delayFrames = int(std::lround(m_tuning.delaySeconds * m_sampleRate));
     const int wanted = framesWanted(delayFrames);
     const QVector<float> source = m_source ? m_source(wanted) : QVector<float>{};
@@ -215,5 +222,12 @@ void Spectrum::setLayout(const QString &layout) {
         return;
     m_output = output;
     resetOutputs();
-    emit updated();
+    // A new layout may read outputs the frozen picture never computed (stereo
+    // after bars, say), so take one snapshot of the current audio for it
+    // rather than showing nothing until unfrozen. The longest frame time
+    // lets the bars rise almost all the way in that one step.
+    if (m_frozen)
+        analyze(float(MaxFrameSeconds));
+    else
+        emit updated();
 }

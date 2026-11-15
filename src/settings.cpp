@@ -39,7 +39,7 @@ delay=auto           ; seconds to hold the picture back; auto follows the output
 
 [capture]
 target=              ; an app's name (like spotify) to show only its sound; empty = everything
-sleep_after=5        ; seconds of silence before capture pauses so the device can sleep; 0 = never
+sleep_after=5        ; seconds of silence before the bars clear and drawing pauses; 0 = never
 
 [wallpaper]          ; used by spectra --wallpaper
 height=0.35          ; fraction of the screen the bars fill, from the bottom

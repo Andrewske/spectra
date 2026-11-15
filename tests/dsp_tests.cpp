@@ -429,6 +429,36 @@ private slots:
         QVERIFY(maxOf(spectrum.levels()) < 0.05);
     }
 
+    void spectrumClearZeroesEverything() {
+        auto fake = std::make_shared<FakeSource>();
+        Spectrum spectrum(sourceFor(fake), Rate);
+        tickFor(spectrum, 0.3);
+        QVERIFY(maxOf(spectrum.levels()) > 0.99);
+        QSignalSpy updates(&spectrum, &Spectrum::updated);
+        spectrum.clear();
+        QCOMPARE(updates.count(), 1);
+        QCOMPARE(maxOf(spectrum.levels()), 0.0);
+        QCOMPARE(maxOf(spectrum.peaks()), 0.0);
+        spectrum.setLayout("waveform");
+        tickFor(spectrum, 0.2);
+        spectrum.clear();
+        QCOMPARE(maxOf(spectrum.waveform()), 0.0);
+    }
+
+    void spectrumLayoutSwitchWhileFrozenTakesSnapshot() {
+        Spectrum spectrum(leftOnlySine(1000.0), Rate);
+        tickFor(spectrum, 0.3);
+        spectrum.setFrozen(true);
+        QSignalSpy updates(&spectrum, &Spectrum::updated);
+        spectrum.setLayout("stereo");
+        QCOMPARE(updates.count(), 1);
+        QVERIFY(maxOf(spectrum.levelsLeft()) > 0.9);
+        QCOMPARE(maxOf(spectrum.levelsRight()), 0.0);
+        const QList<qreal> held = spectrum.levelsLeft();
+        tickFor(spectrum, 0.3);
+        QCOMPARE(spectrum.levelsLeft(), held); // still frozen
+    }
+
     void spectrumAnalyzesDelayedAudio() {
         auto fake = std::make_shared<FakeSource>();
         fake->silentFrames = Rate / 2; // the newest half second is silent

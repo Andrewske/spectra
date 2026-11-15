@@ -69,6 +69,8 @@ private slots:
     void currentClearedBySetter();
     void handAddedPresetShowsUp();
     void setValuesWritesOnce();
+    void folderCreatedAfterStartShowsUp();
+    void presetEditedInPlaceIsReread();
 };
 
 void PresetsTests::builtInsListedFirstInOrder() {
@@ -249,6 +251,36 @@ void PresetsTests::handAddedPresetShowsUp() {
     writeFile(f.presets() + "/Neon.conf", "[look]\nglow=false\n"); // can't shadow a built-in
     QTRY_COMPARE(names(presets).size(), 7);
     QCOMPARE(names(presets).last(), QString("Later"));
+}
+
+// A fresh install has no presets folder; making it by hand later must work.
+void PresetsTests::folderCreatedAfterStartShowsUp() {
+    Fixture f;
+    Settings settings(f.config());
+    Presets presets(&settings, f.presets());
+    QVERIFY(!QFileInfo::exists(f.presets()));
+    writeFile(f.presets() + "/Later.conf", "[look]\nglow=true\n");
+    QTRY_COMPARE(names(presets).size(), 7);
+    writeFile(f.presets() + "/Again.conf", "[look]\nglow=true\n"); // and the folder is watched now
+    QTRY_COMPARE(names(presets).size(), 8);
+}
+
+// Writing into the file without replacing it, the way some editors save.
+void PresetsTests::presetEditedInPlaceIsReread() {
+    Fixture f;
+    writeFile(f.presets() + "/Mine.conf", "[look]\ncolors=#ff0000, #00ff00\n");
+    Settings settings(f.config());
+    Presets presets(&settings, f.presets());
+    presets.apply("Mine");
+    QCOMPARE(presets.current(), QString("Mine"));
+    QFile file(f.presets() + "/Mine.conf");
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write("[look]\ncolors=#123456\n");
+    file.close();
+    QTRY_COMPARE(presets.list().last().toMap().value("colors").toStringList(), QStringList{"#123456"});
+    QCOMPARE(presets.current(), QString()); // the config no longer matches the edited preset
+    presets.apply("Mine");
+    QVERIFY(readFile(f.config()).contains("colors=#123456"));
 }
 
 void PresetsTests::setValuesWritesOnce() {

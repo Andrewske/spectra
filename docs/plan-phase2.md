@@ -153,9 +153,9 @@ into the README.
   - **stereo**: left channel grows up from the center line, right grows
     down.
   - **waveform**: a smooth line, 2-3 px, colored by the gradient across
-    its width (Shapes can't stroke with a gradient; segmenting the line or
-    a shader mask both work, pick one and say why). It should look good
-    with glow.
+    its width. It should look good with glow. (Built with Qt 6.12's
+    `ShapePath.strokeGradient`; this plan first assumed Shapes couldn't
+    stroke with a gradient.)
   - Peaks where they read well (mirrored, stereo); skip where they don't.
 - Glow comes free from Main.qml. Check every layout with glow on and off.
 - GPU effects don't render on the offscreen platform: check visuals with a

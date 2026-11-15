@@ -49,7 +49,8 @@ signals:
 private:
     QList<Preset> all() const;
     void loadUserPresets();
-    void watchDirectory();
+    void watchFolder();
+    void revalidateCurrent();
     void followSettings();
     void setCurrent(const QString &name);
 

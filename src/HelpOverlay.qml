@@ -14,7 +14,7 @@ Rectangle {
         ["P", "Peak caps on or off"],
         ["C", "Switch color mode (spectrum or vertical)"],
         ["L", "Next layout (bars, mirrored, radial, stereo, waveform)"],
-        ["1-9", "Apply a preset"],
+        ["1-9", "Apply a preset (hover the sparkle for the menu)"],
         ["G", "Glow on or off (or click the sparkle)"],
         ["Ctrl+Q", "Quit"]
     ]

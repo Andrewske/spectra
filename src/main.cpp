@@ -44,6 +44,15 @@ void followSettings(const Settings &settings, Capture &capture, Spectrum &spectr
     QObject::connect(&capture, &Capture::outputLatencyChanged, &spectrum, apply);
 }
 
+// When capture goes to sleep the window stops ticking, so the bars are
+// zeroed right then instead of being left wherever smoothing had them.
+void clearOnSleep(const Capture &capture, Spectrum &spectrum) {
+    QObject::connect(&capture, &Capture::statusChanged, &spectrum, [c = &capture, sp = &spectrum] {
+        if (c->sleeping())
+            sp->clear();
+    });
+}
+
 } // namespace
 
 int main(int argc, char *argv[]) {
@@ -58,6 +67,7 @@ int main(int argc, char *argv[]) {
     Spectrum spectrum([&capture](int frames) { return capture.latestFrames(frames); }, Capture::SampleRate);
     Presets presets(&settings);
     followSettings(settings, capture, spectrum);
+    clearOnSleep(capture, spectrum);
 
     QQmlApplicationEngine engine;
     QQmlContext *context = engine.rootContext();

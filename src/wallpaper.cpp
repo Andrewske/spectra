@@ -128,9 +128,15 @@ bool requested(int argc, char *argv[]) {
 void prepareProcess() {
     requestAlpha();
     QLockFile &lock = instanceLock();
-    if (claimOrStop(lock, stopProcess) == Claim::StoppedOther) {
+    const Claim claim = claimOrStop(lock, stopProcess);
+    if (claim == Claim::StoppedOther) {
         waitForStop(lock);
         std::exit(0);
+    }
+    if (claim == Claim::Failed) {
+        qCritical("spectra --wallpaper: can't take the lock %s (error %d), so not starting "
+                  "a wallpaper that could run twice", qPrintable(lock.fileName()), int(lock.error()));
+        std::exit(1);
     }
     catchTermination();
 }
@@ -158,15 +164,22 @@ QString lockPath(const QString &runtimeDir) {
     return QDir(dir).filePath(QStringLiteral("spectra-wallpaper.lock"));
 }
 
+// A failed stop usually means the owner exited between tryLock and the
+// signal, which frees the lock, so try again a couple of times before
+// giving up.
 Claim claimOrStop(QLockFile &lock, const std::function<bool(qint64)> &stop) {
     lock.setStaleLockTime(0);
-    if (lock.tryLock(0))
-        return Claim::Owner;
-    qint64 pid = 0;
-    QString host, app;
-    if (lock.error() != QLockFile::LockFailedError || !lock.getLockInfo(&pid, &host, &app))
-        return Claim::Unguarded;
-    return pid > 0 && stop(pid) ? Claim::StoppedOther : Claim::Unguarded;
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        if (lock.tryLock(0))
+            return Claim::Owner;
+        if (lock.error() != QLockFile::LockFailedError)
+            return Claim::Failed;
+        qint64 pid = 0;
+        QString host, app;
+        if (lock.getLockInfo(&pid, &host, &app) && pid > 0 && stop(pid))
+            return Claim::StoppedOther;
+    }
+    return Claim::Failed;
 }
 
 int screenIndex(const QStringList &names, const QString &wanted) {

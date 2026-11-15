@@ -55,6 +55,11 @@ public:
     // a hidden window or a stall) are clamped so bars don't jump.
     Q_INVOKABLE void tick(double dtSeconds);
 
+    // Drops every level, peak and waveform point to zero at once. Capture
+    // calls for this when it goes to sleep: the window stops ticking then, so
+    // smoothing would otherwise leave the last loud frame on screen.
+    Q_INVOKABLE void clear();
+
 signals:
     void updated();
     void tuningChanged();
@@ -69,6 +74,7 @@ private:
     void rebuildAnalysis();
     // Empties the outputs the current layout doesn't read and zeroes the rest.
     void resetOutputs();
+    void analyze(float dt);
     int framesWanted(int delayFrames) const;
     // One per Output: analyzes the fftSize (or waveform) frames before the delay.
     void tickMono(const QVector<float> &frames, float dt);
