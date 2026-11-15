@@ -63,7 +63,7 @@ Item {
         target: spectrum
         function onUpdated() {
             bars.levels = spectrum.levels
-            bars.peaks = settings.showPeaks ? spectrum.peaks : []
+            bars.peaks = spectrum.peaks
         }
     }
 
@@ -98,7 +98,9 @@ Item {
             }
 
             Rectangle {
-                visible: bar.peak > 0.002
+                // Bound to the setting rather than sampled per frame, so P
+                // still works while the bars are frozen.
+                visible: settings.showPeaks && bar.peak > 0.002
                 width: parent.width
                 height: bars.capHeight
                 y: Math.max(0, Math.round(bars.height - bar.peak * bars.height) - bars.capHeight)

@@ -75,8 +75,8 @@ Colors are anything Qt understands: `#rrggbb`, `#aarrggbb`, or names like
 | `fft_size`   | 512 to 16384, a power of two | Bigger resolves bass better but reacts a little later. |
 | `min_hz`     | 1 to 24000        | Lowest frequency shown. Must be below `max_hz`. |
 | `max_hz`     | 1 to 24000        | Highest frequency shown. |
-| `floor_db`   | -200 to 20        | Level that draws an empty bar. Must be below `ceiling_db`. |
-| `ceiling_db` | -200 to 20        | Level that draws a full bar. Lower it if the bars look short. |
+| `floor_db`   | -120 to 20        | Level that draws an empty bar. Must be below `ceiling_db`. |
+| `ceiling_db` | -120 to 20        | Level that draws a full bar. Lower it if the bars look short. |
 | `attack`     | seconds           | How quickly a bar rises. |
 | `decay`      | seconds           | How quickly a bar falls. |
 | `peak_fall`  | per second        | How fast peak caps fall, as a fraction of the full height. |

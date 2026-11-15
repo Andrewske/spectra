@@ -57,6 +57,10 @@ private slots:
     void settersPersistAndKeepOtherKeys();
     void invalidModeIgnored();
     void externalEditEmitsChanged();
+    void unreadableFileIsNeverOverwritten();
+    void duplicateKeySavesTheEffectiveCopy();
+    void floorBelowDspSilenceRejected();
+    void colorAtBlendsAlpha();
 };
 
 void SettingsTests::defaultsWrittenOnFirstRun() {
@@ -209,6 +213,51 @@ void SettingsTests::externalEditEmitsChanged() {
     // A second edit proves the watch was re-armed after the file was replaced.
     writeFile(path, "[look]\ngap=0.7\n");
     QTRY_COMPARE(settings.barGap(), 0.7);
+}
+
+void SettingsTests::unreadableFileIsNeverOverwritten() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, CustomConfig);
+    Settings settings(path);
+    QVERIFY(QFile::setPermissions(path, QFile::WriteOwner));
+    if (QFile(path).open(QIODevice::ReadOnly))
+        QSKIP("running with permissions that ignore the read bit");
+    settings.setColorMode("spectrum");
+    QVERIFY(QFile::setPermissions(path, QFile::ReadOwner | QFile::WriteOwner));
+    QVERIFY(readFile(path).contains("bands=64"));
+    QVERIFY(readFile(path).contains("mode=vertical"));
+    QVERIFY2(settings.error().contains("Can't read"), qPrintable(settings.error()));
+}
+
+void SettingsTests::duplicateKeySavesTheEffectiveCopy() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, "[look]\nmode=spectrum\nmode=vertical\n");
+    Settings settings(path);
+    QCOMPARE(settings.colorMode(), QString("vertical"));
+    settings.setColorMode("spectrum");
+    Settings reread(path);
+    QCOMPARE(reread.colorMode(), QString("spectrum"));
+}
+
+void SettingsTests::floorBelowDspSilenceRejected() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, "[analysis]\nfloor_db=-150\nceiling_db=-100\n");
+    Settings settings(path);
+    QCOMPARE(settings.tuning().floorDb, dsp::Tuning{}.floorDb);
+    QVERIFY2(settings.error().contains("floor_db"), qPrintable(settings.error()));
+}
+
+void SettingsTests::colorAtBlendsAlpha() {
+    QTemporaryDir dir;
+    const QString path = dir.filePath("spectra.conf");
+    writeFile(path, "[look]\ncolors=#00ff0000, #ffff0000\n"); // #AARRGGBB
+    Settings settings(path);
+    QCOMPARE(settings.colorAt(0).alpha(), 0);
+    QCOMPARE(settings.colorAt(1).alpha(), 255);
+    QVERIFY(std::abs(settings.colorAt(0.5).alphaF() - 0.5) < 0.01);
 }
 
 int runSettingsTests(int argc, char *argv[]) {

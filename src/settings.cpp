@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 namespace {
 
@@ -95,17 +96,20 @@ Ini parseIni(const QString &text) {
     return ini;
 }
 
-// The line index of key in section, or -1.
+// The line index of key in section, or -1. When a key appears twice the
+// last one is returned, because that's the one parseIni reads; changing an
+// earlier copy would save a value that never takes effect.
 int findKeyLine(const QStringList &lines, const QString &section, const QString &key) {
     QString current;
+    int found = -1;
     for (int i = 0; i < lines.size(); ++i) {
         const QString line = stripComment(lines[i]);
         if (isSection(line))
             current = sectionOf(line);
         else if (current == section && !isSkippable(line) && line.indexOf('=') > 0 && keyOf(line) == key)
-            return i;
+            found = i;
     }
-    return -1;
+    return found;
 }
 
 // Swaps the value but keeps the key's spelling and any trailing comment.
@@ -150,11 +154,17 @@ QString writeAtomically(const QString &path, const QString &text) {
     return QStringLiteral("Couldn't save %1: %2").arg(path, file.errorString());
 }
 
-QString readText(const QString &path) {
+// Empty when the file can't be read, which is different from an empty file:
+// saving over a file we couldn't read would throw away the user's settings.
+std::optional<QString> readText(const QString &path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        return {};
+        return std::nullopt;
     return QString::fromUtf8(file.readAll());
+}
+
+QString unreadable(const QString &path) {
+    return QStringLiteral("Can't read %1; keeping the current settings").arg(path);
 }
 
 // "look/gap" reads as "[look] gap" in messages, matching the file.
@@ -284,8 +294,10 @@ dsp::Tuning readTuning(const Ini &ini, QStringList &errors) {
     t.fftSize = readFftSize(ini, t.fftSize, errors);
     t.minHz = number("min_hz", t.minHz, 1.0, MaxHz);
     t.maxHz = number("max_hz", t.maxHz, 1.0, MaxHz);
-    t.floorDb = number("floor_db", t.floorDb, -200.0, 20.0);
-    t.ceilingDb = number("ceiling_db", t.ceilingDb, -200.0, 20.0);
+    // dsp clamps silence at -120 dB, so a floor below that would draw silence
+    // as signal.
+    t.floorDb = number("floor_db", t.floorDb, -120.0, 20.0);
+    t.ceilingDb = number("ceiling_db", t.ceilingDb, -120.0, 20.0);
     t.attackSeconds = number("attack", t.attackSeconds, 0.001, 10.0);
     t.decaySeconds = number("decay", t.decaySeconds, 0.001, 10.0);
     t.peakFallPerSecond = number("peak_fall", t.peakFallPerSecond, 0.01, 100.0);
@@ -303,7 +315,8 @@ QList<QColor> toStops(const QStringList &colors) {
 QColor mix(const QColor &a, const QColor &b, double f) {
     return QColor::fromRgbF(float(a.redF() + (b.redF() - a.redF()) * f),
                             float(a.greenF() + (b.greenF() - a.greenF()) * f),
-                            float(a.blueF() + (b.blueF() - a.blueF()) * f));
+                            float(a.blueF() + (b.blueF() - a.blueF()) * f),
+                            float(a.alphaF() + (b.alphaF() - a.alphaF()) * f));
 }
 
 QString defaultPath() {
@@ -338,8 +351,17 @@ void Settings::reload() {
     // keep the current values and wait for it to come back.
     if (!QFileInfo::exists(m_path))
         return;
+    const std::optional<QString> text = readText(m_path);
+    if (text)
+        apply(*text);
+    else
+        m_error = unreadable(m_path);
+    emit changed();
+}
+
+void Settings::apply(const QString &text) {
     QStringList errors;
-    const Ini ini = parseIni(readText(m_path));
+    const Ini ini = parseIni(text);
     const Look look = readLook(ini, errors);
     m_tuning = readTuning(ini, errors);
     m_background = look.background;
@@ -349,7 +371,6 @@ void Settings::reload() {
     m_peaks = look.peaks;
     m_gap = look.gap;
     m_error = errors.join('\n');
-    emit changed();
 }
 
 // Editors and our own saves replace the file, which ends the old inotify
@@ -365,10 +386,14 @@ void Settings::watch() {
 }
 
 void Settings::save(const QString &section, const QString &key, const QString &value) {
-    QString text = readText(m_path);
-    if (text.isEmpty())
-        text = QString::fromUtf8(DefaultConfig);
-    const QString error = writeAtomically(m_path, setIniValue(text, section, key, value));
+    const bool exists = QFileInfo::exists(m_path);
+    const std::optional<QString> text = exists ? readText(m_path) : QString::fromUtf8(DefaultConfig);
+    if (!text) {
+        m_error = unreadable(m_path);
+        return;
+    }
+    const QString base = text->trimmed().isEmpty() ? QString::fromUtf8(DefaultConfig) : *text;
+    const QString error = writeAtomically(m_path, setIniValue(base, section, key, value));
     if (!error.isEmpty())
         m_error = error;
 }

@@ -49,6 +49,7 @@ signals:
 private:
     void ensureFile();
     void reload();
+    void apply(const QString &text);
     void watch();
     void save(const QString &section, const QString &key, const QString &value);
 
