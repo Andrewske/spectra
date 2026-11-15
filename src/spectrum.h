@@ -17,6 +17,8 @@ class Spectrum : public QObject {
     // Per-channel levels for the stereo layout, same bands and range as levels.
     Q_PROPERTY(QList<qreal> levelsLeft READ levelsLeft NOTIFY updated)
     Q_PROPERTY(QList<qreal> levelsRight READ levelsRight NOTIFY updated)
+    Q_PROPERTY(QList<qreal> peaksLeft READ peaksLeft NOTIFY updated)
+    Q_PROPERTY(QList<qreal> peaksRight READ peaksRight NOTIFY updated)
     // The latest audio as -1..1 points, oldest first, for the waveform layout.
     Q_PROPERTY(QList<qreal> waveform READ waveform NOTIFY updated)
     Q_PROPERTY(int bandCount READ bandCount NOTIFY tuningChanged)
@@ -33,10 +35,14 @@ public:
     QList<qreal> peaks() const;
     QList<qreal> levelsLeft() const;
     QList<qreal> levelsRight() const;
+    QList<qreal> peaksLeft() const;
+    QList<qreal> peaksRight() const;
     QList<qreal> waveform() const;
 
     // The layout being drawn (Settings::Layouts), so tick only computes what
-    // that layout reads.
+    // that layout reads: levels and peaks for bars, mirrored and radial; the
+    // per-channel lists for stereo; waveform for waveform. Lists a layout
+    // doesn't read are empty, except levels and peaks, which read as zeros.
     void setLayout(const QString &layout);
     int bandCount() const;
     bool frozen() const;
@@ -55,8 +61,21 @@ signals:
     void frozenChanged();
 
 private:
+    // What tick computes, picked from the layout name.
+    enum class Output { Mono, Stereo, Waveform };
+    static Output outputFor(const QString &layout);
+
     // Rebuilds what depends on fftSize, band layout and sample rate.
     void rebuildAnalysis();
+    // Empties the outputs the current layout doesn't read and zeroes the rest.
+    void resetOutputs();
+    int framesWanted(int delayFrames) const;
+    // One per Output: analyzes the fftSize (or waveform) frames before the delay.
+    void tickMono(const QVector<float> &frames, float dt);
+    void tickStereo(const QVector<float> &frames, float dt);
+    void tickWaveform(const QVector<float> &frames, float dt);
+    // Bands, dB and normalize: a power spectrum to the 0..1 levels a bar targets.
+    QVector<float> targetLevels(const QVector<float> &power) const;
 
     Source m_source;
     int m_sampleRate;
@@ -69,4 +88,16 @@ private:
     QVector<float> m_peaks;
     QList<qreal> m_levelsOut;
     QList<qreal> m_peaksOut;
+
+    Output m_output = Output::Mono;
+    QVector<float> m_levelsLeft;
+    QVector<float> m_levelsRight;
+    QVector<float> m_peaksLeft;
+    QVector<float> m_peaksRight;
+    QList<qreal> m_levelsLeftOut;
+    QList<qreal> m_levelsRightOut;
+    QList<qreal> m_peaksLeftOut;
+    QList<qreal> m_peaksRightOut;
+    float m_waveEnvelope = 0.0f;
+    QList<qreal> m_waveformOut;
 };

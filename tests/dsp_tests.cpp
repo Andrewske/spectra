@@ -80,6 +80,34 @@ double maxOf(const QList<qreal> &values) {
     return *std::max_element(values.cbegin(), values.cend());
 }
 
+// Interleaved stereo with a sine in the left channel only.
+Spectrum::Source leftOnlySine(double hz) {
+    return [hz](int frames) {
+        QVector<float> out = stereoSine(frames, hz);
+        for (int i = 1; i < out.size(); i += 2)
+            out[i] = 0.0f;
+        return out;
+    };
+}
+
+// A sine at an arbitrary phase, scaled by amplitude, that records requests.
+Spectrum::Source phasedSine(double hz, double amplitude, std::shared_ptr<int> lastRequest) {
+    return [=](int frames) {
+        *lastRequest = frames;
+        QVector<float> out(frames * 2);
+        for (int i = 0; i < frames; ++i)
+            out[2 * i] = out[2 * i + 1] = float(amplitude * std::sin(2.0 * Pi * hz * i / Rate + 1.0));
+        return out;
+    };
+}
+
+double maxAbs(const QList<qreal> &values) {
+    double peak = 0.0;
+    for (qreal v : values)
+        peak = std::max(peak, std::abs(v));
+    return peak;
+}
+
 } // namespace
 
 class DspTests : public QObject {
@@ -248,6 +276,128 @@ private slots:
         QCOMPARE(peak[0], 0.1f);
         peak = dsp::peaks(peak, {0.9f}, 0.6f, 0.01f);
         QCOMPARE(peak[0], 0.9f);
+    }
+
+    void channelPowerAveragesToStereoPower() {
+        QVector<float> frames = stereoSine(1024, 3000.0);
+        for (int i = 1; i < frames.size(); i += 2)
+            frames[i] *= 0.25f;
+        const QVector<float> window = dsp::hann(1024);
+        const QVector<float> mean = dsp::average(dsp::channelPower(frames, window, 0),
+                                                 dsp::channelPower(frames, window, 1));
+        const QVector<float> stereo = dsp::stereoPower(frames, window);
+        QCOMPARE(mean.size(), stereo.size());
+        for (int k = 0; k < stereo.size(); ++k)
+            QVERIFY(std::abs(mean[k] - stereo[k]) <= 1e-3f * std::max(1.0f, stereo[k]));
+    }
+
+    void channelPowerRejectsBadChannel() {
+        const QVector<float> power = dsp::channelPower(stereoSine(512, 1000.0), dsp::hann(512), 2);
+        QCOMPARE(*std::max_element(power.cbegin(), power.cend()), 0.0f);
+    }
+
+    void monoMixesChannels() {
+        QCOMPARE(dsp::mono({1.0f, 0.0f, -0.5f, -0.5f}), (QVector<float>{0.5f, -0.5f}));
+    }
+
+    void risingZeroCrossingIsNewestAndInterpolated() {
+        // Rising crossings between 1 and 2 (at 1.25) and between 5 and 6 (at 5.5).
+        const QVector<float> s{1.0f, -0.3f, 0.9f, 0.5f, 0.2f, -0.4f, 0.4f, 0.8f};
+        QVERIFY(std::abs(dsp::risingZeroCrossing(s, 1, 7) - 5.5) < 1e-6);
+        QVERIFY(std::abs(dsp::risingZeroCrossing(s, 1, 5) - 1.25) < 1e-6);
+        QCOMPARE(dsp::risingZeroCrossing(s, 3, 5), -1.0);
+        QCOMPARE(dsp::risingZeroCrossing({}, 0, 10), -1.0);
+    }
+
+    void resampleInterpolatesAndPadsOutside() {
+        const QVector<float> s{0.0f, 1.0f, 2.0f, 3.0f};
+        QCOMPARE(dsp::resample(s, 0.5, 2.0, 3), (QVector<float>{0.5f, 1.5f, 2.5f}));
+        QCOMPARE(dsp::resample(s, 0.0, 3.0, 4), (QVector<float>{0.0f, 1.0f, 2.0f, 3.0f}));
+        QCOMPARE(dsp::resample(s, 2.0, 2.0, 3), (QVector<float>{2.0f, 3.0f, 0.0f}));
+        QCOMPARE(dsp::resample(s, 3.5, 1.0, 2), (QVector<float>{0.0f, 0.0f}));
+    }
+
+    void followPeakJumpsUpAndReleasesSlowly() {
+        QCOMPARE(dsp::followPeak(0.2f, 0.9f, 1.5f, 0.01f), 0.9f);
+        const float released = dsp::followPeak(1.0f, 0.0f, 1.0f, 1.0f);
+        QVERIFY(std::abs(released - std::exp(-1.0f)) < 1e-6f);
+    }
+
+    void scaleWaveNormalizesClampsAndFloors() {
+        QCOMPARE(dsp::scaleWave({0.5f, -0.25f}, 0.5f, 0.05f), (QVector<float>{1.0f, -0.5f}));
+        QCOMPARE(dsp::scaleWave({2.0f}, 0.5f, 0.05f), (QVector<float>{1.0f}));
+        QCOMPARE(dsp::scaleWave({0.01f}, 0.0f, 0.05f).first(), 0.2f);
+        QCOMPARE(dsp::peakOf({0.1f, -0.7f, 0.3f}), 0.7f);
+    }
+
+    void stereoLayoutSeparatesChannels() {
+        Spectrum spectrum(leftOnlySine(1000.0), Rate);
+        spectrum.setLayout("stereo");
+        tickFor(spectrum, 0.5);
+        QCOMPARE(spectrum.levelsLeft().size(), spectrum.bandCount());
+        QCOMPARE(spectrum.levelsRight().size(), spectrum.bandCount());
+        QVERIFY(maxOf(spectrum.levelsLeft()) > 0.99);
+        QCOMPARE(maxOf(spectrum.levelsRight()), 0.0);
+        QVERIFY(maxOf(spectrum.peaksLeft()) >= maxOf(spectrum.levelsLeft()));
+        QCOMPARE(maxOf(spectrum.peaksRight()), 0.0);
+        QCOMPARE(maxOf(spectrum.levels()), 0.0); // mono isn't computed
+    }
+
+    void waveformHasPointsInRangeAndStartsOnRisingZero_data() {
+        QTest::addColumn<double>("hz");
+        QTest::addColumn<double>("amplitude");
+        QTest::newRow("440 Hz, full scale") << 440.0 << 1.0;
+        QTest::newRow("1 kHz, quiet") << 1000.0 << 0.2;
+        QTest::newRow("123 Hz, clipping input") << 123.0 << 4.0;
+    }
+
+    void waveformHasPointsInRangeAndStartsOnRisingZero() {
+        QFETCH(double, hz);
+        QFETCH(double, amplitude);
+        Spectrum spectrum(phasedSine(hz, amplitude, std::make_shared<int>()), Rate);
+        spectrum.setLayout("waveform");
+        tickFor(spectrum, 0.2);
+        const QList<qreal> wave = spectrum.waveform();
+        QCOMPARE(wave.size(), 512);
+        QVERIFY(maxAbs(wave) <= 1.0);
+        QVERIFY2(maxAbs(wave) > 0.95, qPrintable(QString("peak %1").arg(maxAbs(wave))));
+        QVERIFY2(std::abs(wave[0]) < 0.02, qPrintable(QString("starts at %1").arg(wave[0])));
+        QVERIFY(wave[1] > wave[0]);
+    }
+
+    void waveformStandsStillOnSteadyTone() {
+        Spectrum spectrum(phasedSine(440.0, 0.8, std::make_shared<int>()), Rate);
+        spectrum.setLayout("waveform");
+        tickFor(spectrum, 0.2);
+        const QList<qreal> first = spectrum.waveform();
+        tickFor(spectrum, 0.1);
+        const QList<qreal> later = spectrum.waveform();
+        for (int i = 0; i < first.size(); ++i)
+            QVERIFY(std::abs(first[i] - later[i]) < 0.02);
+    }
+
+    void layoutSwitchingComputesOnlyWhatIsDrawn() {
+        auto request = std::make_shared<int>();
+        Spectrum spectrum(phasedSine(1000.0, 1.0, request), Rate);
+        QSignalSpy updates(&spectrum, &Spectrum::updated);
+        tickFor(spectrum, 0.2);
+        QVERIFY(spectrum.levelsLeft().isEmpty() && spectrum.waveform().isEmpty());
+        QVERIFY(maxOf(spectrum.levels()) > 0.99);
+        QCOMPARE(*request, spectrum.tuning().fftSize);
+
+        spectrum.setLayout("waveform");
+        tickFor(spectrum, 0.2);
+        QCOMPARE(*request, 2 * 960); // the waveform needs 40 ms, not a whole FFT
+        QCOMPARE(maxOf(spectrum.levels()), 0.0);
+        QVERIFY(spectrum.levelsLeft().isEmpty());
+
+        spectrum.setLayout("stereo");
+        QVERIFY(spectrum.waveform().isEmpty());
+        const int before = updates.count();
+        spectrum.setLayout("stereo"); // unchanged: nothing reset, nothing emitted
+        QCOMPARE(updates.count(), before);
+        spectrum.setLayout("mirrored");
+        QVERIFY(spectrum.levelsLeft().isEmpty());
     }
 
     void spectrumLevelsAreInRange() {

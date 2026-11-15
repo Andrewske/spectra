@@ -36,6 +36,15 @@ QVector<float> hann(int size);
 // be window.size() * 2.
 QVector<float> stereoPower(const QVector<float> &interleaved, const QVector<float> &window);
 
+// Power spectrum of one channel (0 = left, 1 = right) of interleaved stereo,
+// on the same scale as stereoPower: the mean of the two channels' powers is
+// exactly stereoPower, so the stereo layout gets both from two FFTs.
+QVector<float> channelPower(const QVector<float> &interleaved, const QVector<float> &window,
+                            int channel);
+
+// Element-wise mean of two equal-length vectors.
+QVector<float> average(const QVector<float> &a, const QVector<float> &b);
+
 // Exactly `count` log-spaced bands between minHz and maxHz. Bands are
 // ascending, never overlap, and each covers at least one bin; where the low
 // end has fewer bins than bands, those bands widen rather than share bins.
@@ -68,5 +77,31 @@ QVector<float> smooth(const QVector<float> &previous, const QVector<float> &targ
 // Peak caps: jump up to the level, otherwise fall at fallPerSecond.
 QVector<float> peaks(const QVector<float> &previous, const QVector<float> &levels,
                      float fallPerSecond, float dt);
+
+// Waveform helpers.
+
+// Interleaved stereo mixed down to mono, (L + R) / 2 per frame.
+QVector<float> mono(const QVector<float> &interleaved);
+
+// The newest rising zero crossing (a negative sample followed by one at or
+// above zero) between samples earliest and latest, as a fractional sample
+// position interpolated between the two, or -1 when there is none. Starting
+// the trace there keeps a steady tone standing still frame after frame.
+double risingZeroCrossing(const QVector<float> &samples, int earliest, int latest);
+
+// `points` values evenly spaced from start to start + span (in samples,
+// fractional allowed), linearly interpolated; positions outside read 0.
+QVector<float> resample(const QVector<float> &samples, double start, double span, int points);
+
+// A peak envelope for auto-gain: jumps up to peak at once, so the scaled
+// trace never clips, and otherwise falls with the release time constant.
+float followPeak(float envelope, float peak, float releaseSeconds, float dt);
+
+// The largest absolute value in values, 0 for an empty vector.
+float peakOf(const QVector<float> &values);
+
+// Divides by max(envelope, floor) and clamps to -1..1. The floor keeps quiet
+// hiss from being blown up to full height.
+QVector<float> scaleWave(const QVector<float> &wave, float envelope, float floor);
 
 } // namespace dsp
