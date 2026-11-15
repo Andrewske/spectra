@@ -1,6 +1,6 @@
 # Spectra
 
-![Spectra showing a live spectrum in rainbow colors on black](docs/screenshot.png)
+![Spectra: rainbow bars with glow on black](docs/screenshots/hero.png)
 
 A live spectrum of whatever your computer is playing, in a window of its own
 or drawn on your desktop under every window. Black background, colored bars,
@@ -52,12 +52,21 @@ itself toggles glow.
 for mirrored, stereo and waveform, ring outward for radial. Peak caps show
 on bars, mirrored and stereo.
 
+| | |
+|---|---|
+| ![Mirrored layout with the Neon preset](docs/screenshots/mirrored.png) | ![Radial layout with the Sunset preset](docs/screenshots/radial.png) |
+| `mirrored`, Neon | `radial`, Sunset |
+| ![Stereo layout with the Fire preset](docs/screenshots/stereo.png) | ![Waveform layout in rainbow](docs/screenshots/waveform.png) |
+| `stereo`, Fire | `waveform`, Rainbow |
+
 ## Presets
 
 Click a swatch in the corner menu, or press `1`-`9`. Built-ins come first:
 Rainbow, Neon, Sunset, Ocean, Fire, Mono. Then come your own,
 alphabetically. "Save as preset…" saves the current look and tuning under a
 name; hover one of your own and click its x to delete it.
+
+![Bars with the Ocean preset and glow off](docs/screenshots/ocean.png)
 
 Applying a preset writes its keys into `spectra.conf`, so the file always
 shows what's on screen. Keys the preset doesn't set stay as they are.
